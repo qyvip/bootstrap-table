@@ -12,7 +12,6 @@
 		return module = { exports: {} }, fn(module, module.exports), module.exports;
 	}
 
-	var O = 'object';
 	var check = function (it) {
 	  return it && it.Math == Math && it;
 	};
@@ -20,10 +19,10 @@
 	// https://github.com/zloirock/core-js/issues/86#issuecomment-115759028
 	var global_1 =
 	  // eslint-disable-next-line no-undef
-	  check(typeof globalThis == O && globalThis) ||
-	  check(typeof window == O && window) ||
-	  check(typeof self == O && self) ||
-	  check(typeof commonjsGlobal == O && commonjsGlobal) ||
+	  check(typeof globalThis == 'object' && globalThis) ||
+	  check(typeof window == 'object' && window) ||
+	  check(typeof self == 'object' && self) ||
+	  check(typeof commonjsGlobal == 'object' && commonjsGlobal) ||
 	  // eslint-disable-next-line no-new-func
 	  Function('return this')();
 
@@ -179,7 +178,7 @@
 		f: f$2
 	};
 
-	var hide = descriptors ? function (object, key, value) {
+	var createNonEnumerableProperty = descriptors ? function (object, key, value) {
 	  return objectDefineProperty.f(object, key, createPropertyDescriptor(1, value));
 	} : function (object, key, value) {
 	  object[key] = value;
@@ -188,20 +187,22 @@
 
 	var setGlobal = function (key, value) {
 	  try {
-	    hide(global_1, key, value);
+	    createNonEnumerableProperty(global_1, key, value);
 	  } catch (error) {
 	    global_1[key] = value;
 	  } return value;
 	};
 
-	var shared = createCommonjsModule(function (module) {
 	var SHARED = '__core-js_shared__';
 	var store = global_1[SHARED] || setGlobal(SHARED, {});
 
+	var sharedStore = store;
+
+	var shared = createCommonjsModule(function (module) {
 	(module.exports = function (key, value) {
-	  return store[key] || (store[key] = value !== undefined ? value : {});
+	  return sharedStore[key] || (sharedStore[key] = value !== undefined ? value : {});
 	})('versions', []).push({
-	  version: '3.1.3',
+	  version: '3.3.2',
 	  mode:  'global',
 	  copyright: '© 2019 Denis Pushkarev (zloirock.ru)'
 	});
@@ -245,25 +246,25 @@
 	};
 
 	if (nativeWeakMap) {
-	  var store = new WeakMap$1();
-	  var wmget = store.get;
-	  var wmhas = store.has;
-	  var wmset = store.set;
+	  var store$1 = new WeakMap$1();
+	  var wmget = store$1.get;
+	  var wmhas = store$1.has;
+	  var wmset = store$1.set;
 	  set = function (it, metadata) {
-	    wmset.call(store, it, metadata);
+	    wmset.call(store$1, it, metadata);
 	    return metadata;
 	  };
 	  get = function (it) {
-	    return wmget.call(store, it) || {};
+	    return wmget.call(store$1, it) || {};
 	  };
 	  has$1 = function (it) {
-	    return wmhas.call(store, it);
+	    return wmhas.call(store$1, it);
 	  };
 	} else {
 	  var STATE = sharedKey('state');
 	  hiddenKeys[STATE] = true;
 	  set = function (it, metadata) {
-	    hide(it, STATE, metadata);
+	    createNonEnumerableProperty(it, STATE, metadata);
 	    return metadata;
 	  };
 	  get = function (it) {
@@ -296,7 +297,7 @@
 	  var simple = options ? !!options.enumerable : false;
 	  var noTargetGet = options ? !!options.noTargetGet : false;
 	  if (typeof value == 'function') {
-	    if (typeof key == 'string' && !has(value, 'name')) hide(value, 'name', key);
+	    if (typeof key == 'string' && !has(value, 'name')) createNonEnumerableProperty(value, 'name', key);
 	    enforceInternalState(value).source = TEMPLATE.join(typeof key == 'string' ? key : '');
 	  }
 	  if (O === global_1) {
@@ -309,7 +310,7 @@
 	    simple = true;
 	  }
 	  if (simple) O[key] = value;
-	  else hide(O, key, value);
+	  else createNonEnumerableProperty(O, key, value);
 	// add fake Function#toString for correct work wrapped methods / constructors with methods like LoDash isNative
 	})(Function.prototype, 'toString', function toString() {
 	  return typeof this == 'function' && getInternalState(this).source || functionToString.call(this);
@@ -513,7 +514,7 @@
 	    }
 	    // add a flag to not completely full polyfills
 	    if (options.sham || (targetProperty && targetProperty.sham)) {
-	      hide(sourceProperty, 'sham', true);
+	      createNonEnumerableProperty(sourceProperty, 'sham', true);
 	    }
 	    // extend global
 	    redefine(target, key, sourceProperty, options);
@@ -568,10 +569,10 @@
 	});
 
 	var Symbol$1 = global_1.Symbol;
-	var store$1 = shared('wks');
+	var store$2 = shared('wks');
 
 	var wellKnownSymbol = function (name) {
-	  return store$1[name] || (store$1[name] = nativeSymbol && Symbol$1[name]
+	  return store$2[name] || (store$2[name] = nativeSymbol && Symbol$1[name]
 	    || (nativeSymbol ? Symbol$1 : uid)('Symbol.' + name));
 	};
 
@@ -746,7 +747,7 @@
 	// Array.prototype[@@unscopables]
 	// https://tc39.github.io/ecma262/#sec-array.prototype-@@unscopables
 	if (ArrayPrototype[UNSCOPABLES] == undefined) {
-	  hide(ArrayPrototype, UNSCOPABLES, objectCreate(null));
+	  createNonEnumerableProperty(ArrayPrototype, UNSCOPABLES, objectCreate(null));
 	}
 
 	// add a key to Array.prototype[@@unscopables]
@@ -774,6 +775,29 @@
 	// https://tc39.github.io/ecma262/#sec-array.prototype-@@unscopables
 	addToUnscopables(FIND);
 
+	var sloppyArrayMethod = function (METHOD_NAME, argument) {
+	  var method = [][METHOD_NAME];
+	  return !method || !fails(function () {
+	    // eslint-disable-next-line no-useless-call,no-throw-literal
+	    method.call(null, argument || function () { throw 1; }, 1);
+	  });
+	};
+
+	var $forEach = arrayIteration.forEach;
+
+
+	// `Array.prototype.forEach` method implementation
+	// https://tc39.github.io/ecma262/#sec-array.prototype.foreach
+	var arrayForEach = sloppyArrayMethod('forEach') ? function forEach(callbackfn /* , thisArg */) {
+	  return $forEach(this, callbackfn, arguments.length > 1 ? arguments[1] : undefined);
+	} : [].forEach;
+
+	// `Array.prototype.forEach` method
+	// https://tc39.github.io/ecma262/#sec-array.prototype.foreach
+	_export({ target: 'Array', proto: true, forced: [].forEach != arrayForEach }, {
+	  forEach: arrayForEach
+	});
+
 	var $includes = arrayIncludes.includes;
 
 
@@ -787,14 +811,6 @@
 
 	// https://tc39.github.io/ecma262/#sec-array.prototype-@@unscopables
 	addToUnscopables('includes');
-
-	var sloppyArrayMethod = function (METHOD_NAME, argument) {
-	  var method = [][METHOD_NAME];
-	  return !method || !fails(function () {
-	    // eslint-disable-next-line no-useless-call,no-throw-literal
-	    method.call(null, argument || function () { throw 1; }, 1);
-	  });
-	};
 
 	var $indexOf = arrayIncludes.indexOf;
 
@@ -853,6 +869,22 @@
 	      : nativeSort.call(toObject(this), aFunction$1(comparefn));
 	  }
 	});
+
+	var DatePrototype = Date.prototype;
+	var INVALID_DATE = 'Invalid Date';
+	var TO_STRING = 'toString';
+	var nativeDateToString = DatePrototype[TO_STRING];
+	var getTime = DatePrototype.getTime;
+
+	// `Date.prototype.toString` method
+	// https://tc39.github.io/ecma262/#sec-date.prototype.tostring
+	if (new Date(NaN) + '' != INVALID_DATE) {
+	  redefine(DatePrototype, TO_STRING, function toString() {
+	    var value = getTime.call(this);
+	    // eslint-disable-next-line no-self-compare
+	    return value === value ? nativeDateToString.call(this) : INVALID_DATE;
+	  });
+	}
 
 	var FAILS_ON_PRIMITIVES = fails(function () { objectKeys(1); });
 
@@ -920,64 +952,6 @@
 	  return result;
 	};
 
-	var TO_STRING = 'toString';
-	var RegExpPrototype = RegExp.prototype;
-	var nativeToString = RegExpPrototype[TO_STRING];
-
-	var NOT_GENERIC = fails(function () { return nativeToString.call({ source: 'a', flags: 'b' }) != '/a/b'; });
-	// FF44- RegExp#toString has a wrong name
-	var INCORRECT_NAME = nativeToString.name != TO_STRING;
-
-	// `RegExp.prototype.toString` method
-	// https://tc39.github.io/ecma262/#sec-regexp.prototype.tostring
-	if (NOT_GENERIC || INCORRECT_NAME) {
-	  redefine(RegExp.prototype, TO_STRING, function toString() {
-	    var R = anObject(this);
-	    var p = String(R.source);
-	    var rf = R.flags;
-	    var f = String(rf === undefined && R instanceof RegExp && !('flags' in RegExpPrototype) ? regexpFlags.call(R) : rf);
-	    return '/' + p + '/' + f;
-	  }, { unsafe: true });
-	}
-
-	var MATCH = wellKnownSymbol('match');
-
-	// `IsRegExp` abstract operation
-	// https://tc39.github.io/ecma262/#sec-isregexp
-	var isRegexp = function (it) {
-	  var isRegExp;
-	  return isObject(it) && ((isRegExp = it[MATCH]) !== undefined ? !!isRegExp : classofRaw(it) == 'RegExp');
-	};
-
-	var notARegexp = function (it) {
-	  if (isRegexp(it)) {
-	    throw TypeError("The method doesn't accept regular expressions");
-	  } return it;
-	};
-
-	var MATCH$1 = wellKnownSymbol('match');
-
-	var correctIsRegexpLogic = function (METHOD_NAME) {
-	  var regexp = /./;
-	  try {
-	    '/./'[METHOD_NAME](regexp);
-	  } catch (e) {
-	    try {
-	      regexp[MATCH$1] = false;
-	      return '/./'[METHOD_NAME](regexp);
-	    } catch (f) { /* empty */ }
-	  } return false;
-	};
-
-	// `String.prototype.includes` method
-	// https://tc39.github.io/ecma262/#sec-string.prototype.includes
-	_export({ target: 'String', proto: true, forced: !correctIsRegexpLogic('includes') }, {
-	  includes: function includes(searchString /* , position = 0 */) {
-	    return !!~String(requireObjectCoercible(this))
-	      .indexOf(notARegexp(searchString), arguments.length > 1 ? arguments[1] : undefined);
-	  }
-	});
-
 	var nativeExec = RegExp.prototype.exec;
 	// This always refers to the native implementation, because the
 	// String#replace polyfill uses ./fix-regexp-well-known-symbol-logic.js,
@@ -1029,6 +1003,68 @@
 	}
 
 	var regexpExec = patchedExec;
+
+	_export({ target: 'RegExp', proto: true, forced: /./.exec !== regexpExec }, {
+	  exec: regexpExec
+	});
+
+	var TO_STRING$1 = 'toString';
+	var RegExpPrototype = RegExp.prototype;
+	var nativeToString = RegExpPrototype[TO_STRING$1];
+
+	var NOT_GENERIC = fails(function () { return nativeToString.call({ source: 'a', flags: 'b' }) != '/a/b'; });
+	// FF44- RegExp#toString has a wrong name
+	var INCORRECT_NAME = nativeToString.name != TO_STRING$1;
+
+	// `RegExp.prototype.toString` method
+	// https://tc39.github.io/ecma262/#sec-regexp.prototype.tostring
+	if (NOT_GENERIC || INCORRECT_NAME) {
+	  redefine(RegExp.prototype, TO_STRING$1, function toString() {
+	    var R = anObject(this);
+	    var p = String(R.source);
+	    var rf = R.flags;
+	    var f = String(rf === undefined && R instanceof RegExp && !('flags' in RegExpPrototype) ? regexpFlags.call(R) : rf);
+	    return '/' + p + '/' + f;
+	  }, { unsafe: true });
+	}
+
+	var MATCH = wellKnownSymbol('match');
+
+	// `IsRegExp` abstract operation
+	// https://tc39.github.io/ecma262/#sec-isregexp
+	var isRegexp = function (it) {
+	  var isRegExp;
+	  return isObject(it) && ((isRegExp = it[MATCH]) !== undefined ? !!isRegExp : classofRaw(it) == 'RegExp');
+	};
+
+	var notARegexp = function (it) {
+	  if (isRegexp(it)) {
+	    throw TypeError("The method doesn't accept regular expressions");
+	  } return it;
+	};
+
+	var MATCH$1 = wellKnownSymbol('match');
+
+	var correctIsRegexpLogic = function (METHOD_NAME) {
+	  var regexp = /./;
+	  try {
+	    '/./'[METHOD_NAME](regexp);
+	  } catch (e) {
+	    try {
+	      regexp[MATCH$1] = false;
+	      return '/./'[METHOD_NAME](regexp);
+	    } catch (f) { /* empty */ }
+	  } return false;
+	};
+
+	// `String.prototype.includes` method
+	// https://tc39.github.io/ecma262/#sec-string.prototype.includes
+	_export({ target: 'String', proto: true, forced: !correctIsRegexpLogic('includes') }, {
+	  includes: function includes(searchString /* , position = 0 */) {
+	    return !!~String(requireObjectCoercible(this))
+	      .indexOf(notARegexp(searchString), arguments.length > 1 ? arguments[1] : undefined);
+	  }
+	});
 
 	var SPECIES$2 = wellKnownSymbol('species');
 
@@ -1113,7 +1149,7 @@
 	      // 21.2.5.9 RegExp.prototype[@@search](string)
 	      : function (string) { return regexMethod.call(string, this); }
 	    );
-	    if (sham) hide(RegExp.prototype[SYMBOL], 'sham', true);
+	    if (sham) createNonEnumerableProperty(RegExp.prototype[SYMBOL], 'sham', true);
 	  }
 	};
 
@@ -1543,137 +1579,48 @@
 	  TouchList: 0
 	};
 
-	var $forEach = arrayIteration.forEach;
-
-
-	// `Array.prototype.forEach` method implementation
-	// https://tc39.github.io/ecma262/#sec-array.prototype.foreach
-	var arrayForEach = sloppyArrayMethod('forEach') ? function forEach(callbackfn /* , thisArg */) {
-	  return $forEach(this, callbackfn, arguments.length > 1 ? arguments[1] : undefined);
-	} : [].forEach;
-
 	for (var COLLECTION_NAME in domIterables) {
 	  var Collection = global_1[COLLECTION_NAME];
 	  var CollectionPrototype = Collection && Collection.prototype;
 	  // some Chrome versions have non-configurable methods on DOMTokenList
 	  if (CollectionPrototype && CollectionPrototype.forEach !== arrayForEach) try {
-	    hide(CollectionPrototype, 'forEach', arrayForEach);
+	    createNonEnumerableProperty(CollectionPrototype, 'forEach', arrayForEach);
 	  } catch (error) {
 	    CollectionPrototype.forEach = arrayForEach;
 	  }
 	}
 
-	function _typeof(obj) {
-	  if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") {
-	    _typeof = function (obj) {
-	      return typeof obj;
-	    };
-	  } else {
-	    _typeof = function (obj) {
-	      return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
-	    };
-	  }
+	var userAgent = getBuiltIn('navigator', 'userAgent') || '';
 
-	  return _typeof(obj);
-	}
+	var slice = [].slice;
+	var MSIE = /MSIE .\./.test(userAgent); // <- dirty ie9- check
 
-	function _classCallCheck(instance, Constructor) {
-	  if (!(instance instanceof Constructor)) {
-	    throw new TypeError("Cannot call a class as a function");
-	  }
-	}
-
-	function _defineProperties(target, props) {
-	  for (var i = 0; i < props.length; i++) {
-	    var descriptor = props[i];
-	    descriptor.enumerable = descriptor.enumerable || false;
-	    descriptor.configurable = true;
-	    if ("value" in descriptor) descriptor.writable = true;
-	    Object.defineProperty(target, descriptor.key, descriptor);
-	  }
-	}
-
-	function _createClass(Constructor, protoProps, staticProps) {
-	  if (protoProps) _defineProperties(Constructor.prototype, protoProps);
-	  if (staticProps) _defineProperties(Constructor, staticProps);
-	  return Constructor;
-	}
-
-	function _inherits(subClass, superClass) {
-	  if (typeof superClass !== "function" && superClass !== null) {
-	    throw new TypeError("Super expression must either be null or a function");
-	  }
-
-	  subClass.prototype = Object.create(superClass && superClass.prototype, {
-	    constructor: {
-	      value: subClass,
-	      writable: true,
-	      configurable: true
-	    }
-	  });
-	  if (superClass) _setPrototypeOf(subClass, superClass);
-	}
-
-	function _getPrototypeOf(o) {
-	  _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) {
-	    return o.__proto__ || Object.getPrototypeOf(o);
+	var wrap = function (scheduler) {
+	  return function (handler, timeout /* , ...arguments */) {
+	    var boundArgs = arguments.length > 2;
+	    var args = boundArgs ? slice.call(arguments, 2) : undefined;
+	    return scheduler(boundArgs ? function () {
+	      // eslint-disable-next-line no-new-func
+	      (typeof handler == 'function' ? handler : Function(handler)).apply(this, args);
+	    } : handler, timeout);
 	  };
-	  return _getPrototypeOf(o);
-	}
+	};
 
-	function _setPrototypeOf(o, p) {
-	  _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) {
-	    o.__proto__ = p;
-	    return o;
-	  };
+	// ie9- setTimeout & setInterval additional parameters fix
+	// https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#timers
+	_export({ global: true, bind: true, forced: MSIE }, {
+	  // `setTimeout` method
+	  // https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#dom-settimeout
+	  setTimeout: wrap(global_1.setTimeout),
+	  // `setInterval` method
+	  // https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#dom-setinterval
+	  setInterval: wrap(global_1.setInterval)
+	});
 
-	  return _setPrototypeOf(o, p);
-	}
-
-	function _assertThisInitialized(self) {
-	  if (self === void 0) {
-	    throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
-	  }
-
-	  return self;
-	}
-
-	function _possibleConstructorReturn(self, call) {
-	  if (call && (typeof call === "object" || typeof call === "function")) {
-	    return call;
-	  }
-
-	  return _assertThisInitialized(self);
-	}
-
-	function _superPropBase(object, property) {
-	  while (!Object.prototype.hasOwnProperty.call(object, property)) {
-	    object = _getPrototypeOf(object);
-	    if (object === null) break;
-	  }
-
-	  return object;
-	}
-
-	function _get(target, property, receiver) {
-	  if (typeof Reflect !== "undefined" && Reflect.get) {
-	    _get = Reflect.get;
-	  } else {
-	    _get = function _get(target, property, receiver) {
-	      var base = _superPropBase(target, property);
-
-	      if (!base) return;
-	      var desc = Object.getOwnPropertyDescriptor(base, property);
-
-	      if (desc.get) {
-	        return desc.get.call(receiver);
-	      }
-
-	      return desc.value;
-	    };
-	  }
-
-	  return _get(target, property, receiver || target);
+	function _inheritsLoose(subClass, superClass) {
+	  subClass.prototype = Object.create(superClass.prototype);
+	  subClass.prototype.constructor = subClass;
+	  subClass.__proto__ = superClass;
 	}
 
 	/**
@@ -1879,7 +1826,7 @@
 	    var z = that.options.pagination ? that.options.sidePagination === 'server' ? that.pageTo : that.options.totalRows : that.pageTo;
 	    $.each(that.header.fields, function (j, field) {
 	      var column = that.columns[that.fieldsColumnsIndex[field]];
-	      var selectControl = that.$tableBody.find(".bootstrap-table-filter-control-".concat(UtilsFilterControl.escapeID(column.field)));
+	      var selectControl = that.$tableBody.find(".bootstrap-table-filter-control-" + UtilsFilterControl.escapeID(column.field));
 
 	      if (UtilsFilterControl.isColumnSearchableViaSelect(column) && UtilsFilterControl.isFilterDataNotGiven(column) && UtilsFilterControl.hasSelectControlElement(selectControl)) {
 	        if (selectControl.get(selectControl.length - 1).options.length === 0) {
@@ -1898,7 +1845,7 @@
 	            formattedValue = Utils.calculateObjectValue(that.header, column.filterDataCollector, [fieldValue, data[i], formattedValue], formattedValue);
 	          }
 
-	          if (_typeof(formattedValue) === 'object' && formattedValue !== null) {
+	          if (typeof formattedValue === 'object' && formattedValue !== null) {
 	            formattedValue.forEach(function (value) {
 	              UtilsFilterControl.addOptionToSelectControl(selectControl, value, value, column.filterDefault);
 	            });
@@ -1979,7 +1926,7 @@
 
 	        if (filterDataType !== null) {
 	          filterDataSource = column.filterData.substring(column.filterData.indexOf(':') + 1, column.filterData.length);
-	          selectControl = that.$tableBody.find(".bootstrap-table-filter-control-".concat(UtilsFilterControl.escapeID(column.field)));
+	          selectControl = that.$tableBody.find(".bootstrap-table-filter-control-" + UtilsFilterControl.escapeID(column.field));
 	          UtilsFilterControl.addOptionToSelectControl(selectControl, '', column.filterControlPlaceholder, column.filterDefault);
 	          filterDataType(filterDataSource, selectControl, column.filterDefault);
 	        } else {
@@ -2029,45 +1976,58 @@
 	    });
 
 	    if (addedFilterControl) {
-	      header.off('keyup', 'input').on('keyup', 'input', function (event, obj) {
+	      header.off('keyup', 'input').on('keyup', 'input', function (_ref6, obj) {
+	        var currentTarget = _ref6.currentTarget,
+	            keyCode = _ref6.keyCode;
 	        // Simulate enter key action from clear button
-	        event.keyCode = obj ? obj.keyCode : event.keyCode;
+	        keyCode = obj ? obj.keyCode : keyCode;
 
-	        if (that.options.searchOnEnterKey && event.keyCode !== 13) {
+	        if (that.options.searchOnEnterKey && keyCode !== 13) {
 	          return;
 	        }
 
-	        if ($.inArray(event.keyCode, [37, 38, 39, 40]) > -1) {
+	        if ($.inArray(keyCode, [37, 38, 39, 40]) > -1) {
 	          return;
 	        }
 
-	        var $currentTarget = $(event.currentTarget);
+	        var $currentTarget = $(currentTarget);
 
 	        if ($currentTarget.is(':checkbox') || $currentTarget.is(':radio')) {
 	          return;
 	        }
 
-	        clearTimeout(event.currentTarget.timeoutId || 0);
-	        event.currentTarget.timeoutId = setTimeout(function () {
-	          that.onColumnSearch(event);
+	        clearTimeout(currentTarget.timeoutId || 0);
+	        currentTarget.timeoutId = setTimeout(function () {
+	          that.onColumnSearch({
+	            currentTarget: currentTarget,
+	            keyCode: keyCode
+	          });
 	        }, that.options.searchTimeOut);
 	      });
-	      header.off('change', 'select').on('change', 'select', function (event) {
-	        if (that.options.searchOnEnterKey && event.keyCode !== 13) {
+	      header.off('change', 'select').on('change', 'select', function (_ref7) {
+	        var currentTarget = _ref7.currentTarget,
+	            keyCode = _ref7.keyCode;
+
+	        if (that.options.searchOnEnterKey && keyCode !== 13) {
 	          return;
 	        }
 
-	        if ($.inArray(event.keyCode, [37, 38, 39, 40]) > -1) {
+	        if ($.inArray(keyCode, [37, 38, 39, 40]) > -1) {
 	          return;
 	        }
 
-	        clearTimeout(event.currentTarget.timeoutId || 0);
-	        event.currentTarget.timeoutId = setTimeout(function () {
-	          that.onColumnSearch(event);
+	        clearTimeout(currentTarget.timeoutId || 0);
+	        currentTarget.timeoutId = setTimeout(function () {
+	          that.onColumnSearch({
+	            currentTarget: currentTarget,
+	            keyCode: keyCode
+	          });
 	        }, that.options.searchTimeOut);
 	      });
-	      header.off('mouseup', 'input').on('mouseup', 'input', function (event) {
-	        var $input = $(this);
+	      header.off('mouseup', 'input').on('mouseup', 'input', function (_ref8) {
+	        var currentTarget = _ref8.currentTarget,
+	            keyCode = _ref8.keyCode;
+	        var $input = $(currentTarget);
 	        var oldValue = $input.val();
 
 	        if (oldValue === '') {
@@ -2078,25 +2038,33 @@
 	          var newValue = $input.val();
 
 	          if (newValue === '') {
-	            clearTimeout(event.currentTarget.timeoutId || 0);
-	            event.currentTarget.timeoutId = setTimeout(function () {
-	              that.onColumnSearch(event);
+	            clearTimeout(currentTarget.timeoutId || 0);
+	            currentTarget.timeoutId = setTimeout(function () {
+	              that.onColumnSearch({
+	                currentTarget: currentTarget,
+	                keyCode: keyCode
+	              });
 	            }, that.options.searchTimeOut);
 	          }
 	        }, 1);
 	      });
 
 	      if (header.find('.date-filter-control').length > 0) {
-	        $.each(that.columns, function (i, _ref6) {
-	          var filterControl = _ref6.filterControl,
-	              field = _ref6.field,
-	              filterDatepickerOptions = _ref6.filterDatepickerOptions;
+	        $.each(that.columns, function (i, _ref9) {
+	          var filterControl = _ref9.filterControl,
+	              field = _ref9.field,
+	              filterDatepickerOptions = _ref9.filterDatepickerOptions;
 
 	          if (filterControl !== undefined && filterControl.toLowerCase() === 'datepicker') {
-	            header.find(".date-filter-control.bootstrap-table-filter-control-".concat(field)).datepicker(filterDatepickerOptions).on('changeDate', function (event) {
-	              clearTimeout(event.currentTarget.timeoutId || 0);
-	              event.currentTarget.timeoutId = setTimeout(function () {
-	                that.onColumnSearch(event);
+	            header.find(".date-filter-control.bootstrap-table-filter-control-" + field).datepicker(filterDatepickerOptions).on('changeDate', function (_ref10) {
+	              var currentTarget = _ref10.currentTarget,
+	                  keyCode = _ref10.keyCode;
+	              clearTimeout(currentTarget.timeoutId || 0);
+	              currentTarget.timeoutId = setTimeout(function () {
+	                that.onColumnSearch({
+	                  currentTarget: currentTarget,
+	                  keyCode: keyCode
+	                });
 	              }, that.options.searchTimeOut);
 	            });
 	          }
@@ -2131,7 +2099,7 @@
 	  }
 	};
 	var filterDataMethods = {
-	  var: function _var(filterDataSource, selectControl, filterOrderBy, selected) {
+	  "var": function _var(filterDataSource, selectControl, filterOrderBy, selected) {
 	    var variableValues = window[filterDataSource]; // eslint-disable-next-line guard-for-in
 
 	    for (var key in variableValues) {
@@ -2177,8 +2145,8 @@
 	    input: function input(that, field, isVisible, placeholder, value) {
 	      return Utils.sprintf('<input type="text" class="form-control bootstrap-table-filter-control-%s" style="width: 100%; visibility: %s" placeholder="%s" value="%s">', field, isVisible, 'undefined' === typeof placeholder ? '' : placeholder, 'undefined' === typeof value ? '' : value);
 	    },
-	    select: function select(_ref7, field, isVisible) {
-	      var options = _ref7.options;
+	    select: function select(_ref11, field, isVisible) {
+	      var options = _ref11.options;
 	      return Utils.sprintf('<select class="form-control bootstrap-table-filter-control-%s" style="width: 100%; visibility: %s" dir="%s"></select>', field, isVisible, UtilsFilterControl.getDirectionOfSelectOptions(options.alignmentSelectControlOptions));
 	    },
 	    datepicker: function datepicker(that, field, isVisible, value) {
@@ -2223,278 +2191,270 @@
 	$.BootstrapTable =
 	/*#__PURE__*/
 	function (_$$BootstrapTable) {
-	  _inherits(_class, _$$BootstrapTable);
+	  _inheritsLoose(_class, _$$BootstrapTable);
 
 	  function _class() {
-	    _classCallCheck(this, _class);
-
-	    return _possibleConstructorReturn(this, _getPrototypeOf(_class).apply(this, arguments));
+	    return _$$BootstrapTable.apply(this, arguments) || this;
 	  }
 
-	  _createClass(_class, [{
-	    key: "init",
-	    value: function init() {
-	      var _this = this;
+	  var _proto = _class.prototype;
 
-	      // Make sure that the filterControl option is set
-	      if (this.options.filterControl) {
-	        var that = this; // Make sure that the internal variables are set correctly
+	  _proto.init = function init() {
+	    var _this = this;
 
-	        this.options.valuesFilterControl = [];
-	        this.$el.on('reset-view.bs.table', function () {
-	          // Create controls on $tableHeader if the height is set
-	          if (!that.options.height) {
-	            return;
-	          } // Avoid recreate the controls
+	    // Make sure that the filterControl option is set
+	    if (this.options.filterControl) {
+	      var that = this; // Make sure that the internal variables are set correctly
 
-
-	          if (that.$tableHeader.find('select').length > 0 || that.$tableHeader.find('input').length > 0) {
-	            return;
-	          }
-
-	          UtilsFilterControl.createControls(that, that.$tableHeader);
-	        }).on('post-header.bs.table', function () {
-	          UtilsFilterControl.setValues(that);
-	        }).on('post-body.bs.table', function () {
-	          if (that.options.height) {
-	            UtilsFilterControl.fixHeaderCSS(that);
-	          }
-
-	          _this.$tableLoading.css('top', _this.$header.outerHeight() + 1);
-	        }).on('column-switch.bs.table', function () {
-	          UtilsFilterControl.setValues(that);
-	        }).on('load-success.bs.table', function () {
-	          that.EnableControls(true);
-	        }).on('load-error.bs.table', function () {
-	          that.EnableControls(true);
-	        });
-	      }
-
-	      _get(_getPrototypeOf(_class.prototype), "init", this).call(this);
-	    }
-	  }, {
-	    key: "initHeader",
-	    value: function initHeader() {
-	      _get(_getPrototypeOf(_class.prototype), "initHeader", this).call(this);
-
-	      if (!this.options.filterControl) {
-	        return;
-	      }
-
-	      UtilsFilterControl.createControls(this, this.$header);
-	    }
-	  }, {
-	    key: "initBody",
-	    value: function initBody() {
-	      _get(_getPrototypeOf(_class.prototype), "initBody", this).call(this);
-
-	      UtilsFilterControl.initFilterSelectControls(this);
-	    }
-	  }, {
-	    key: "initSearch",
-	    value: function initSearch() {
-	      var that = this;
-	      var fp = $.isEmptyObject(that.filterColumnsPartial) ? null : that.filterColumnsPartial;
-
-	      if (fp === null || Object.keys(fp).length <= 1) {
-	        _get(_getPrototypeOf(_class.prototype), "initSearch", this).call(this);
-	      }
-
-	      if (this.options.sidePagination === 'server') {
-	        return;
-	      }
-
-	      if (fp === null) {
-	        return;
-	      } // Check partial column filter
-
-
-	      that.data = fp ? that.options.data.filter(function (item, i) {
-	        var itemIsExpected = [];
-	        Object.keys(item).forEach(function (x, index) {
-	          var key = that.header.fields[index];
-	          var thisColumn = that.columns[that.fieldsColumnsIndex[key]];
-	          var fval = (fp[key] || '').toLowerCase();
-	          var value = Utils.getItemField(item, key, false);
-
-	          if (fval === '') {
-	            itemIsExpected.push(true);
-	          } else {
-	            // Fix #142: search use formated data
-	            if (thisColumn && thisColumn.searchFormatter) {
-	              value = $.fn.bootstrapTable.utils.calculateObjectValue(that.header, that.header.formatters[$.inArray(key, that.header.fields)], [value, item, i], value);
-	            }
-
-	            if ($.inArray(key, that.header.fields) !== -1) {
-	              if (value === undefined || value === null) {
-	                itemIsExpected.push(false);
-	              } else if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-	                if (thisColumn.filterStrictSearch) {
-	                  itemIsExpected.push(value.toString().toLowerCase() === fval.toString().toLowerCase());
-	                } else if (thisColumn.filterStartsWithSearch) {
-	                  itemIsExpected.push("".concat(value).toLowerCase().indexOf(fval) === 0);
-	                } else {
-	                  itemIsExpected.push("".concat(value).toLowerCase().includes(fval));
-	                }
-	              }
-	            }
-	          }
-	        });
-	        return !itemIsExpected.includes(false);
-	      }) : that.data;
-	    }
-	  }, {
-	    key: "initColumnSearch",
-	    value: function initColumnSearch(filterColumnsDefaults) {
-	      UtilsFilterControl.copyValues(this);
-
-	      if (filterColumnsDefaults) {
-	        this.filterColumnsPartial = filterColumnsDefaults;
-	        this.updatePagination(); // eslint-disable-next-line guard-for-in
-
-	        for (var filter in filterColumnsDefaults) {
-	          this.trigger('column-search', filter, filterColumnsDefaults[filter]);
-	        }
-	      }
-	    }
-	  }, {
-	    key: "onColumnSearch",
-	    value: function onColumnSearch(event) {
-	      if ($.inArray(event.keyCode, [37, 38, 39, 40]) > -1) {
-	        return;
-	      }
-
-	      UtilsFilterControl.copyValues(this);
-	      var text = $.trim($(event.currentTarget).val());
-	      var $field = $(event.currentTarget).closest('[data-field]').data('field');
-
-	      if ($.isEmptyObject(this.filterColumnsPartial)) {
-	        this.filterColumnsPartial = {};
-	      }
-
-	      if (text) {
-	        this.filterColumnsPartial[$field] = text;
-	      } else {
-	        delete this.filterColumnsPartial[$field];
-	      }
-
-	      this.options.pageNumber = 1;
-	      this.EnableControls(false);
-	      this.onSearch(event, false);
-	      this.trigger('column-search', $field, text);
-	    }
-	  }, {
-	    key: "initToolbar",
-	    value: function initToolbar() {
-	      this.showSearchClearButton = this.options.filterControl && this.options.showSearchClearButton;
-
-	      _get(_getPrototypeOf(_class.prototype), "initToolbar", this).call(this);
-	    }
-	  }, {
-	    key: "resetSearch",
-	    value: function resetSearch() {
-	      if (this.options.filterControl && this.options.showSearchClearButton) {
-	        this.clearFilterControl();
-	      }
-
-	      _get(_getPrototypeOf(_class.prototype), "resetSearch", this).call(this);
-	    }
-	  }, {
-	    key: "clearFilterControl",
-	    value: function clearFilterControl() {
-	      if (this.options.filterControl) {
-	        var that = this;
-	        var cookies = UtilsFilterControl.collectBootstrapCookies();
-	        var header = UtilsFilterControl.getCurrentHeader(that);
-	        var table = header.closest('table');
-	        var controls = header.find(UtilsFilterControl.getCurrentSearchControls(that));
-	        var search = that.$toolbar.find('.search input');
-	        var hasValues = false;
-	        var timeoutId = 0;
-	        $.each(that.options.valuesFilterControl, function (i, item) {
-	          hasValues = hasValues ? true : item.value !== '';
-	          item.value = '';
-	        });
-	        $.each(that.options.filterControls, function (i, item) {
-	          item.text = '';
-	        });
-	        UtilsFilterControl.setValues(that); // clear cookies once the filters are clean
-
-	        clearTimeout(timeoutId);
-	        timeoutId = setTimeout(function () {
-	          if (cookies && cookies.length > 0) {
-	            $.each(cookies, function (i, item) {
-	              if (that.deleteCookie !== undefined) {
-	                that.deleteCookie(item);
-	              }
-	            });
-	          }
-	        }, that.options.searchTimeOut); // If there is not any value in the controls exit this method
-
-	        if (!hasValues) {
+	      this.options.valuesFilterControl = [];
+	      this.$el.on('reset-view.bs.table', function () {
+	        // Create controls on $tableHeader if the height is set
+	        if (!that.options.height) {
 	          return;
-	        } // Clear each type of filter if it exists.
-	        // Requires the body to reload each time a type of filter is found because we never know
-	        // which ones are going to be present.
+	        } // Avoid recreate the controls
 
 
-	        if (controls.length > 0) {
-	          this.filterColumnsPartial = {};
-	          $(controls[0]).trigger(controls[0].tagName === 'INPUT' ? 'keyup' : 'change', {
-	            keyCode: 13
-	          });
-	        } else {
+	        if (that.$tableHeader.find('select').length > 0 || that.$tableHeader.find('input').length > 0) {
 	          return;
 	        }
 
-	        if (search.length > 0) {
-	          that.resetSearch();
-	        } // use the default sort order if it exists. do nothing if it does not
-
-
-	        if (that.options.sortName !== table.data('sortName') || that.options.sortOrder !== table.data('sortOrder')) {
-	          var sorter = header.find(Utils.sprintf('[data-field="%s"]', $(controls[0]).closest('table').data('sortName')));
-
-	          if (sorter.length > 0) {
-	            that.onSort({
-	              type: 'keypress',
-	              currentTarget: sorter
-	            });
-	            $(sorter).find('.sortable').trigger('click');
-	          }
+	        UtilsFilterControl.createControls(that, that.$tableHeader);
+	      }).on('post-header.bs.table', function () {
+	        UtilsFilterControl.setValues(that);
+	      }).on('post-body.bs.table', function () {
+	        if (that.options.height) {
+	          UtilsFilterControl.fixHeaderCSS(that);
 	        }
-	      }
-	    }
-	  }, {
-	    key: "triggerSearch",
-	    value: function triggerSearch() {
-	      var header = UtilsFilterControl.getCurrentHeader(this);
-	      var searchControls = UtilsFilterControl.getCurrentSearchControls(this);
-	      header.find(searchControls).each(function () {
-	        var el = $(this);
 
-	        if (el.is('select')) {
-	          el.change();
-	        } else {
-	          el.keyup();
-	        }
+	        _this.$tableLoading.css('top', _this.$header.outerHeight() + 1);
+	      }).on('column-switch.bs.table', function () {
+	        UtilsFilterControl.setValues(that);
+	      }).on('load-success.bs.table', function () {
+	        that.enableControls(true);
+	      }).on('load-error.bs.table', function () {
+	        that.enableControls(true);
 	      });
 	    }
-	  }, {
-	    key: "EnableControls",
-	    value: function EnableControls(enable) {
-	      if (this.options.disableControlWhenSearch && this.options.sidePagination === 'server') {
-	        var header = UtilsFilterControl.getCurrentHeader(this);
-	        var searchControls = UtilsFilterControl.getCurrentSearchControls(this);
 
-	        if (!enable) {
-	          header.find(searchControls).prop('disabled', 'disabled');
+	    _$$BootstrapTable.prototype.init.call(this);
+	  };
+
+	  _proto.initHeader = function initHeader() {
+	    _$$BootstrapTable.prototype.initHeader.call(this);
+
+	    if (!this.options.filterControl) {
+	      return;
+	    }
+
+	    UtilsFilterControl.createControls(this, this.$header);
+	  };
+
+	  _proto.initBody = function initBody() {
+	    _$$BootstrapTable.prototype.initBody.call(this);
+
+	    UtilsFilterControl.initFilterSelectControls(this);
+	  };
+
+	  _proto.initSearch = function initSearch() {
+	    var that = this;
+	    var fp = $.isEmptyObject(that.filterColumnsPartial) ? null : that.filterColumnsPartial;
+
+	    if (fp === null || Object.keys(fp).length <= 1) {
+	      _$$BootstrapTable.prototype.initSearch.call(this);
+	    }
+
+	    if (this.options.sidePagination === 'server') {
+	      return;
+	    }
+
+	    if (fp === null) {
+	      return;
+	    } // Check partial column filter
+
+
+	    that.data = fp ? that.options.data.filter(function (item, i) {
+	      var itemIsExpected = [];
+	      Object.keys(item).forEach(function (x, index) {
+	        var key = that.header.fields[index];
+	        var thisColumn = that.columns[that.fieldsColumnsIndex[key]];
+	        var fval = (fp[key] || '').toLowerCase();
+	        var value = Utils.getItemField(item, key, false);
+
+	        if (fval === '') {
+	          itemIsExpected.push(true);
 	        } else {
-	          header.find(searchControls).removeProp('disabled');
+	          // Fix #142: search use formated data
+	          if (thisColumn && thisColumn.searchFormatter) {
+	            value = $.fn.bootstrapTable.utils.calculateObjectValue(that.header, that.header.formatters[$.inArray(key, that.header.fields)], [value, item, i], value);
+	          }
+
+	          if ($.inArray(key, that.header.fields) !== -1) {
+	            if (value === undefined || value === null) {
+	              itemIsExpected.push(false);
+	            } else if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+	              if (thisColumn.filterStrictSearch) {
+	                itemIsExpected.push(value.toString().toLowerCase() === fval.toString().toLowerCase());
+	              } else if (thisColumn.filterStartsWithSearch) {
+	                itemIsExpected.push(("" + value).toLowerCase().indexOf(fval) === 0);
+	              } else {
+	                itemIsExpected.push(("" + value).toLowerCase().includes(fval));
+	              }
+	            }
+	          }
+	        }
+	      });
+	      return !itemIsExpected.includes(false);
+	    }) : that.data;
+	  };
+
+	  _proto.initColumnSearch = function initColumnSearch(filterColumnsDefaults) {
+	    UtilsFilterControl.copyValues(this);
+
+	    if (filterColumnsDefaults) {
+	      this.filterColumnsPartial = filterColumnsDefaults;
+	      this.updatePagination(); // eslint-disable-next-line guard-for-in
+
+	      for (var filter in filterColumnsDefaults) {
+	        this.trigger('column-search', filter, filterColumnsDefaults[filter]);
+	      }
+	    }
+	  };
+
+	  _proto.onColumnSearch = function onColumnSearch(_ref12) {
+	    var currentTarget = _ref12.currentTarget,
+	        keyCode = _ref12.keyCode;
+
+	    if ($.inArray(keyCode, [37, 38, 39, 40]) > -1) {
+	      return;
+	    }
+
+	    UtilsFilterControl.copyValues(this);
+	    var text = $.trim($(currentTarget).val());
+	    var $field = $(currentTarget).closest('[data-field]').data('field');
+
+	    if ($.isEmptyObject(this.filterColumnsPartial)) {
+	      this.filterColumnsPartial = {};
+	    }
+
+	    if (text) {
+	      this.filterColumnsPartial[$field] = text;
+	    } else {
+	      delete this.filterColumnsPartial[$field];
+	    }
+
+	    this.options.pageNumber = 1;
+	    this.enableControls(false);
+	    this.onSearch({
+	      currentTarget: currentTarget
+	    }, false);
+	    this.trigger('column-search', $field, text);
+	  };
+
+	  _proto.initToolbar = function initToolbar() {
+	    this.showSearchClearButton = this.options.filterControl && this.options.showSearchClearButton;
+
+	    _$$BootstrapTable.prototype.initToolbar.call(this);
+	  };
+
+	  _proto.resetSearch = function resetSearch() {
+	    if (this.options.filterControl && this.options.showSearchClearButton) {
+	      this.clearFilterControl();
+	    }
+
+	    _$$BootstrapTable.prototype.resetSearch.call(this);
+	  };
+
+	  _proto.clearFilterControl = function clearFilterControl() {
+	    if (this.options.filterControl) {
+	      var that = this;
+	      var cookies = UtilsFilterControl.collectBootstrapCookies();
+	      var header = UtilsFilterControl.getCurrentHeader(that);
+	      var table = header.closest('table');
+	      var controls = header.find(UtilsFilterControl.getCurrentSearchControls(that));
+	      var search = that.$toolbar.find('.search input');
+	      var hasValues = false;
+	      var timeoutId = 0;
+	      $.each(that.options.valuesFilterControl, function (i, item) {
+	        hasValues = hasValues ? true : item.value !== '';
+	        item.value = '';
+	      });
+	      $.each(that.options.filterControls, function (i, item) {
+	        item.text = '';
+	      });
+	      UtilsFilterControl.setValues(that); // clear cookies once the filters are clean
+
+	      clearTimeout(timeoutId);
+	      timeoutId = setTimeout(function () {
+	        if (cookies && cookies.length > 0) {
+	          $.each(cookies, function (i, item) {
+	            if (that.deleteCookie !== undefined) {
+	              that.deleteCookie(item);
+	            }
+	          });
+	        }
+	      }, that.options.searchTimeOut); // If there is not any value in the controls exit this method
+
+	      if (!hasValues) {
+	        return;
+	      } // Clear each type of filter if it exists.
+	      // Requires the body to reload each time a type of filter is found because we never know
+	      // which ones are going to be present.
+
+
+	      if (controls.length > 0) {
+	        this.filterColumnsPartial = {};
+	        $(controls[0]).trigger(controls[0].tagName === 'INPUT' ? 'keyup' : 'change', {
+	          keyCode: 13
+	        });
+	      } else {
+	        return;
+	      }
+
+	      if (search.length > 0) {
+	        that.resetSearch();
+	      } // use the default sort order if it exists. do nothing if it does not
+
+
+	      if (that.options.sortName !== table.data('sortName') || that.options.sortOrder !== table.data('sortOrder')) {
+	        var sorter = header.find(Utils.sprintf('[data-field="%s"]', $(controls[0]).closest('table').data('sortName')));
+
+	        if (sorter.length > 0) {
+	          that.onSort({
+	            type: 'keypress',
+	            currentTarget: sorter
+	          });
+	          $(sorter).find('.sortable').trigger('click');
 	        }
 	      }
 	    }
-	  }]);
+	  };
+
+	  _proto.triggerSearch = function triggerSearch() {
+	    var header = UtilsFilterControl.getCurrentHeader(this);
+	    var searchControls = UtilsFilterControl.getCurrentSearchControls(this);
+	    header.find(searchControls).each(function () {
+	      var el = $(this);
+
+	      if (el.is('select')) {
+	        el.change();
+	      } else {
+	        el.keyup();
+	      }
+	    });
+	  };
+
+	  _proto.enableControls = function enableControls(enable) {
+	    if (this.options.disableControlWhenSearch && this.options.sidePagination === 'server') {
+	      var header = UtilsFilterControl.getCurrentHeader(this);
+	      var searchControls = UtilsFilterControl.getCurrentSearchControls(this);
+
+	      if (!enable) {
+	        header.find(searchControls).prop('disabled', 'disabled');
+	      } else {
+	        header.find(searchControls).removeProp('disabled');
+	      }
+	    }
+	  };
 
 	  return _class;
 	}($.BootstrapTable);

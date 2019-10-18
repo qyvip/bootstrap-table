@@ -1,3 +1,7 @@
+# 兼容
+> 兼容IE8
+
+
 # [Bootstrap Table](https://bootstrap-table.com)
 
 [![Build Status](https://travis-ci.org/wenzhixin/bootstrap-table.svg)](https://travis-ci.org/wenzhixin/bootstrap-table)

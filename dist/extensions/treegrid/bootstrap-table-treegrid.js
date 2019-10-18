@@ -12,7 +12,6 @@
 		return module = { exports: {} }, fn(module, module.exports), module.exports;
 	}
 
-	var O = 'object';
 	var check = function (it) {
 	  return it && it.Math == Math && it;
 	};
@@ -20,10 +19,10 @@
 	// https://github.com/zloirock/core-js/issues/86#issuecomment-115759028
 	var global_1 =
 	  // eslint-disable-next-line no-undef
-	  check(typeof globalThis == O && globalThis) ||
-	  check(typeof window == O && window) ||
-	  check(typeof self == O && self) ||
-	  check(typeof commonjsGlobal == O && commonjsGlobal) ||
+	  check(typeof globalThis == 'object' && globalThis) ||
+	  check(typeof window == 'object' && window) ||
+	  check(typeof self == 'object' && self) ||
+	  check(typeof commonjsGlobal == 'object' && commonjsGlobal) ||
 	  // eslint-disable-next-line no-new-func
 	  Function('return this')();
 
@@ -179,7 +178,7 @@
 		f: f$2
 	};
 
-	var hide = descriptors ? function (object, key, value) {
+	var createNonEnumerableProperty = descriptors ? function (object, key, value) {
 	  return objectDefineProperty.f(object, key, createPropertyDescriptor(1, value));
 	} : function (object, key, value) {
 	  object[key] = value;
@@ -188,20 +187,22 @@
 
 	var setGlobal = function (key, value) {
 	  try {
-	    hide(global_1, key, value);
+	    createNonEnumerableProperty(global_1, key, value);
 	  } catch (error) {
 	    global_1[key] = value;
 	  } return value;
 	};
 
-	var shared = createCommonjsModule(function (module) {
 	var SHARED = '__core-js_shared__';
 	var store = global_1[SHARED] || setGlobal(SHARED, {});
 
+	var sharedStore = store;
+
+	var shared = createCommonjsModule(function (module) {
 	(module.exports = function (key, value) {
-	  return store[key] || (store[key] = value !== undefined ? value : {});
+	  return sharedStore[key] || (sharedStore[key] = value !== undefined ? value : {});
 	})('versions', []).push({
-	  version: '3.1.3',
+	  version: '3.3.2',
 	  mode:  'global',
 	  copyright: '© 2019 Denis Pushkarev (zloirock.ru)'
 	});
@@ -245,25 +246,25 @@
 	};
 
 	if (nativeWeakMap) {
-	  var store = new WeakMap$1();
-	  var wmget = store.get;
-	  var wmhas = store.has;
-	  var wmset = store.set;
+	  var store$1 = new WeakMap$1();
+	  var wmget = store$1.get;
+	  var wmhas = store$1.has;
+	  var wmset = store$1.set;
 	  set = function (it, metadata) {
-	    wmset.call(store, it, metadata);
+	    wmset.call(store$1, it, metadata);
 	    return metadata;
 	  };
 	  get = function (it) {
-	    return wmget.call(store, it) || {};
+	    return wmget.call(store$1, it) || {};
 	  };
 	  has$1 = function (it) {
-	    return wmhas.call(store, it);
+	    return wmhas.call(store$1, it);
 	  };
 	} else {
 	  var STATE = sharedKey('state');
 	  hiddenKeys[STATE] = true;
 	  set = function (it, metadata) {
-	    hide(it, STATE, metadata);
+	    createNonEnumerableProperty(it, STATE, metadata);
 	    return metadata;
 	  };
 	  get = function (it) {
@@ -296,7 +297,7 @@
 	  var simple = options ? !!options.enumerable : false;
 	  var noTargetGet = options ? !!options.noTargetGet : false;
 	  if (typeof value == 'function') {
-	    if (typeof key == 'string' && !has(value, 'name')) hide(value, 'name', key);
+	    if (typeof key == 'string' && !has(value, 'name')) createNonEnumerableProperty(value, 'name', key);
 	    enforceInternalState(value).source = TEMPLATE.join(typeof key == 'string' ? key : '');
 	  }
 	  if (O === global_1) {
@@ -309,7 +310,7 @@
 	    simple = true;
 	  }
 	  if (simple) O[key] = value;
-	  else hide(O, key, value);
+	  else createNonEnumerableProperty(O, key, value);
 	// add fake Function#toString for correct work wrapped methods / constructors with methods like LoDash isNative
 	})(Function.prototype, 'toString', function toString() {
 	  return typeof this == 'function' && getInternalState(this).source || functionToString.call(this);
@@ -513,7 +514,7 @@
 	    }
 	    // add a flag to not completely full polyfills
 	    if (options.sham || (targetProperty && targetProperty.sham)) {
-	      hide(sourceProperty, 'sham', true);
+	      createNonEnumerableProperty(sourceProperty, 'sham', true);
 	    }
 	    // extend global
 	    redefine(target, key, sourceProperty, options);
@@ -628,10 +629,10 @@
 	};
 
 	var Symbol$1 = global_1.Symbol;
-	var store$1 = shared('wks');
+	var store$2 = shared('wks');
 
 	var wellKnownSymbol = function (name) {
-	  return store$1[name] || (store$1[name] = nativeSymbol && Symbol$1[name]
+	  return store$2[name] || (store$2[name] = nativeSymbol && Symbol$1[name]
 	    || (nativeSymbol ? Symbol$1 : uid)('Symbol.' + name));
 	};
 
@@ -1027,7 +1028,9 @@
 
 	// `Symbol.prototype[@@toPrimitive]` method
 	// https://tc39.github.io/ecma262/#sec-symbol.prototype-@@toprimitive
-	if (!$Symbol[PROTOTYPE$1][TO_PRIMITIVE]) hide($Symbol[PROTOTYPE$1], TO_PRIMITIVE, $Symbol[PROTOTYPE$1].valueOf);
+	if (!$Symbol[PROTOTYPE$1][TO_PRIMITIVE]) {
+	  createNonEnumerableProperty($Symbol[PROTOTYPE$1], TO_PRIMITIVE, $Symbol[PROTOTYPE$1].valueOf);
+	}
 	// `Symbol.prototype[@@toStringTag]` property
 	// https://tc39.github.io/ecma262/#sec-symbol.prototype-@@tostringtag
 	setToStringTag($Symbol, SYMBOL);
@@ -1157,13 +1160,19 @@
 	  }
 	});
 
+	// `Array.isArray` method
+	// https://tc39.github.io/ecma262/#sec-array.isarray
+	_export({ target: 'Array', stat: true }, {
+	  isArray: isArray
+	});
+
 	var UNSCOPABLES = wellKnownSymbol('unscopables');
 	var ArrayPrototype = Array.prototype;
 
 	// Array.prototype[@@unscopables]
 	// https://tc39.github.io/ecma262/#sec-array.prototype-@@unscopables
 	if (ArrayPrototype[UNSCOPABLES] == undefined) {
-	  hide(ArrayPrototype, UNSCOPABLES, objectCreate(null));
+	  createNonEnumerableProperty(ArrayPrototype, UNSCOPABLES, objectCreate(null));
 	}
 
 	// add a key to Array.prototype[@@unscopables]
@@ -1212,7 +1221,9 @@
 	if (IteratorPrototype == undefined) IteratorPrototype = {};
 
 	// 25.1.2.1.1 %IteratorPrototype%[@@iterator]()
-	if ( !has(IteratorPrototype, ITERATOR)) hide(IteratorPrototype, ITERATOR, returnThis);
+	if ( !has(IteratorPrototype, ITERATOR)) {
+	  createNonEnumerableProperty(IteratorPrototype, ITERATOR, returnThis);
+	}
 
 	var iteratorsCore = {
 	  IteratorPrototype: IteratorPrototype,
@@ -1296,7 +1307,7 @@
 	        if (objectSetPrototypeOf) {
 	          objectSetPrototypeOf(CurrentIteratorPrototype, IteratorPrototype$2);
 	        } else if (typeof CurrentIteratorPrototype[ITERATOR$1] != 'function') {
-	          hide(CurrentIteratorPrototype, ITERATOR$1, returnThis$1);
+	          createNonEnumerableProperty(CurrentIteratorPrototype, ITERATOR$1, returnThis$1);
 	        }
 	      }
 	      // Set @@toStringTag to native iterators
@@ -1312,7 +1323,7 @@
 
 	  // define iterator
 	  if ( IterablePrototype[ITERATOR$1] !== defaultIterator) {
-	    hide(IterablePrototype, ITERATOR$1, defaultIterator);
+	    createNonEnumerableProperty(IterablePrototype, ITERATOR$1, defaultIterator);
 	  }
 
 	  // export additional methods
@@ -1537,15 +1548,17 @@
 	  if (CollectionPrototype) {
 	    // some Chrome versions have non-configurable methods on DOMTokenList
 	    if (CollectionPrototype[ITERATOR$2] !== ArrayValues) try {
-	      hide(CollectionPrototype, ITERATOR$2, ArrayValues);
+	      createNonEnumerableProperty(CollectionPrototype, ITERATOR$2, ArrayValues);
 	    } catch (error) {
 	      CollectionPrototype[ITERATOR$2] = ArrayValues;
 	    }
-	    if (!CollectionPrototype[TO_STRING_TAG$3]) hide(CollectionPrototype, TO_STRING_TAG$3, COLLECTION_NAME);
+	    if (!CollectionPrototype[TO_STRING_TAG$3]) {
+	      createNonEnumerableProperty(CollectionPrototype, TO_STRING_TAG$3, COLLECTION_NAME);
+	    }
 	    if (domIterables[COLLECTION_NAME]) for (var METHOD_NAME in es_array_iterator) {
 	      // some Chrome versions have non-configurable methods on DOMTokenList
 	      if (CollectionPrototype[METHOD_NAME] !== es_array_iterator[METHOD_NAME]) try {
-	        hide(CollectionPrototype, METHOD_NAME, es_array_iterator[METHOD_NAME]);
+	        createNonEnumerableProperty(CollectionPrototype, METHOD_NAME, es_array_iterator[METHOD_NAME]);
 	      } catch (error) {
 	        CollectionPrototype[METHOD_NAME] = es_array_iterator[METHOD_NAME];
 	      }
@@ -1553,103 +1566,10 @@
 	  }
 	}
 
-	function _classCallCheck(instance, Constructor) {
-	  if (!(instance instanceof Constructor)) {
-	    throw new TypeError("Cannot call a class as a function");
-	  }
-	}
-
-	function _defineProperties(target, props) {
-	  for (var i = 0; i < props.length; i++) {
-	    var descriptor = props[i];
-	    descriptor.enumerable = descriptor.enumerable || false;
-	    descriptor.configurable = true;
-	    if ("value" in descriptor) descriptor.writable = true;
-	    Object.defineProperty(target, descriptor.key, descriptor);
-	  }
-	}
-
-	function _createClass(Constructor, protoProps, staticProps) {
-	  if (protoProps) _defineProperties(Constructor.prototype, protoProps);
-	  if (staticProps) _defineProperties(Constructor, staticProps);
-	  return Constructor;
-	}
-
-	function _inherits(subClass, superClass) {
-	  if (typeof superClass !== "function" && superClass !== null) {
-	    throw new TypeError("Super expression must either be null or a function");
-	  }
-
-	  subClass.prototype = Object.create(superClass && superClass.prototype, {
-	    constructor: {
-	      value: subClass,
-	      writable: true,
-	      configurable: true
-	    }
-	  });
-	  if (superClass) _setPrototypeOf(subClass, superClass);
-	}
-
-	function _getPrototypeOf(o) {
-	  _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) {
-	    return o.__proto__ || Object.getPrototypeOf(o);
-	  };
-	  return _getPrototypeOf(o);
-	}
-
-	function _setPrototypeOf(o, p) {
-	  _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) {
-	    o.__proto__ = p;
-	    return o;
-	  };
-
-	  return _setPrototypeOf(o, p);
-	}
-
-	function _assertThisInitialized(self) {
-	  if (self === void 0) {
-	    throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
-	  }
-
-	  return self;
-	}
-
-	function _possibleConstructorReturn(self, call) {
-	  if (call && (typeof call === "object" || typeof call === "function")) {
-	    return call;
-	  }
-
-	  return _assertThisInitialized(self);
-	}
-
-	function _superPropBase(object, property) {
-	  while (!Object.prototype.hasOwnProperty.call(object, property)) {
-	    object = _getPrototypeOf(object);
-	    if (object === null) break;
-	  }
-
-	  return object;
-	}
-
-	function _get(target, property, receiver) {
-	  if (typeof Reflect !== "undefined" && Reflect.get) {
-	    _get = Reflect.get;
-	  } else {
-	    _get = function _get(target, property, receiver) {
-	      var base = _superPropBase(target, property);
-
-	      if (!base) return;
-	      var desc = Object.getOwnPropertyDescriptor(base, property);
-
-	      if (desc.get) {
-	        return desc.get.call(receiver);
-	      }
-
-	      return desc.value;
-	    };
-	  }
-
-	  return _get(target, property, receiver || target);
+	function _inheritsLoose(subClass, superClass) {
+	  subClass.prototype = Object.create(superClass.prototype);
+	  subClass.prototype.constructor = subClass;
+	  subClass.__proto__ = superClass;
 	}
 
 	/**
@@ -1668,148 +1588,133 @@
 	$.BootstrapTable =
 	/*#__PURE__*/
 	function (_$$BootstrapTable) {
-	  _inherits(_class, _$$BootstrapTable);
+	  _inheritsLoose(_class, _$$BootstrapTable);
 
 	  function _class() {
-	    _classCallCheck(this, _class);
-
-	    return _possibleConstructorReturn(this, _getPrototypeOf(_class).apply(this, arguments));
+	    return _$$BootstrapTable.apply(this, arguments) || this;
 	  }
 
-	  _createClass(_class, [{
-	    key: "init",
-	    value: function init() {
-	      var _get2;
+	  var _proto = _class.prototype;
 
-	      this._rowStyle = this.options.rowStyle;
+	  _proto.init = function init() {
+	    var _$$BootstrapTable$pro;
 
-	      for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
-	        args[_key] = arguments[_key];
-	      }
+	    this._rowStyle = this.options.rowStyle;
 
-	      (_get2 = _get(_getPrototypeOf(_class.prototype), "init", this)).call.apply(_get2, [this].concat(args));
+	    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+	      args[_key] = arguments[_key];
 	    }
-	  }, {
-	    key: "initHeader",
-	    value: function initHeader() {
-	      var _get3;
 
-	      for (var _len2 = arguments.length, args = new Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-	        args[_key2] = arguments[_key2];
-	      }
+	    (_$$BootstrapTable$pro = _$$BootstrapTable.prototype.init).call.apply(_$$BootstrapTable$pro, [this].concat(args));
+	  };
 
-	      (_get3 = _get(_getPrototypeOf(_class.prototype), "initHeader", this)).call.apply(_get3, [this].concat(args));
+	  _proto.initHeader = function initHeader() {
+	    var _$$BootstrapTable$pro2;
 
-	      var treeShowField = this.options.treeShowField;
+	    for (var _len2 = arguments.length, args = new Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+	      args[_key2] = arguments[_key2];
+	    }
 
-	      if (treeShowField) {
-	        var _iteratorNormalCompletion = true;
-	        var _didIteratorError = false;
-	        var _iteratorError = undefined;
+	    (_$$BootstrapTable$pro2 = _$$BootstrapTable.prototype.initHeader).call.apply(_$$BootstrapTable$pro2, [this].concat(args));
 
-	        try {
-	          for (var _iterator = this.header.fields[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-	            var field = _step.value;
+	    var treeShowField = this.options.treeShowField;
 
-	            if (treeShowField === field) {
-	              this.treeEnable = true;
-	              break;
-	            }
-	          }
-	        } catch (err) {
-	          _didIteratorError = true;
-	          _iteratorError = err;
-	        } finally {
-	          try {
-	            if (!_iteratorNormalCompletion && _iterator.return != null) {
-	              _iterator.return();
-	            }
-	          } finally {
-	            if (_didIteratorError) {
-	              throw _iteratorError;
-	            }
-	          }
+	    if (treeShowField) {
+	      for (var _iterator = this.header.fields, _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _iterator[Symbol.iterator]();;) {
+	        var _ref;
+
+	        if (_isArray) {
+	          if (_i >= _iterator.length) break;
+	          _ref = _iterator[_i++];
+	        } else {
+	          _i = _iterator.next();
+	          if (_i.done) break;
+	          _ref = _i.value;
+	        }
+
+	        var field = _ref;
+
+	        if (treeShowField === field) {
+	          this.treeEnable = true;
+	          break;
 	        }
 	      }
 	    }
-	  }, {
-	    key: "initBody",
-	    value: function initBody() {
-	      var _get4;
+	  };
 
-	      this.options.virtualScroll = !this.treeEnable;
+	  _proto.initBody = function initBody() {
+	    var _$$BootstrapTable$pro3;
 
-	      for (var _len3 = arguments.length, args = new Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
-	        args[_key3] = arguments[_key3];
-	      }
+	    this.options.virtualScroll = !this.treeEnable;
 
-	      (_get4 = _get(_getPrototypeOf(_class.prototype), "initBody", this)).call.apply(_get4, [this].concat(args));
+	    for (var _len3 = arguments.length, args = new Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
+	      args[_key3] = arguments[_key3];
 	    }
-	  }, {
-	    key: "initTr",
-	    value: function initTr(item, idx, data, parentDom) {
-	      var _this = this;
 
-	      var nodes = data.filter(function (it) {
-	        return item[_this.options.idField] === it[_this.options.parentIdField];
-	      });
-	      parentDom.append(_get(_getPrototypeOf(_class.prototype), "initRow", this).call(this, item, idx, data, parentDom)); // init sub node
+	    (_$$BootstrapTable$pro3 = _$$BootstrapTable.prototype.initBody).call.apply(_$$BootstrapTable$pro3, [this].concat(args));
+	  };
 
-	      var len = nodes.length - 1;
+	  _proto.initTr = function initTr(item, idx, data, parentDom) {
+	    var _this = this;
 
-	      for (var i = 0; i <= len; i++) {
-	        var node = nodes[i];
-	        var defaultItem = $.extend(true, {}, item);
-	        node._level = defaultItem._level + 1;
-	        node._parent = defaultItem;
+	    var nodes = data.filter(function (it) {
+	      return item[_this.options.idField] === it[_this.options.parentIdField];
+	    });
+	    parentDom.append(_$$BootstrapTable.prototype.initRow.call(this, item, idx, data, parentDom)); // init sub node
 
-	        if (i === len) {
-	          node._last = 1;
+	    var len = nodes.length - 1;
+
+	    for (var i = 0; i <= len; i++) {
+	      var node = nodes[i];
+	      var defaultItem = $.extend(true, {}, item);
+	      node._level = defaultItem._level + 1;
+	      node._parent = defaultItem;
+
+	      if (i === len) {
+	        node._last = 1;
+	      } // jquery.treegrid.js
+
+
+	      this.options.rowStyle = function (item, idx) {
+	        var res = _this._rowStyle(item, idx);
+
+	        var id = item[_this.options.idField] ? item[_this.options.idField] : 0;
+	        var pid = item[_this.options.parentIdField] ? item[_this.options.parentIdField] : 0;
+	        res.classes = [res.classes || '', "treegrid-" + id, "treegrid-parent-" + pid].join(' ');
+	        return res;
+	      };
+
+	      this.initTr(node, $.inArray(node, data), data, parentDom);
+	    }
+	  };
+
+	  _proto.initRow = function initRow(item, idx, data, parentDom) {
+	    var _this2 = this;
+
+	    if (this.treeEnable) {
+	      if (this.options.rootParentId === item[this.options.parentIdField] || !item[this.options.parentIdField]) {
+	        if (item._level === undefined) {
+	          item._level = 0;
 	        } // jquery.treegrid.js
 
 
 	        this.options.rowStyle = function (item, idx) {
-	          var res = _this._rowStyle(item, idx);
+	          var res = _this2._rowStyle(item, idx);
 
-	          var id = item[_this.options.idField] ? item[_this.options.idField] : 0;
-	          var pid = item[_this.options.parentIdField] ? item[_this.options.parentIdField] : 0;
-	          res.classes = [res.classes || '', "treegrid-".concat(id), "treegrid-parent-".concat(pid)].join(' ');
+	          var x = item[_this2.options.idField] ? item[_this2.options.idField] : 0;
+	          res.classes = [res.classes || '', "treegrid-" + x].join(' ');
 	          return res;
 	        };
 
-	        this.initTr(node, $.inArray(node, data), data, parentDom);
-	      }
-	    }
-	  }, {
-	    key: "initRow",
-	    value: function initRow(item, idx, data, parentDom) {
-	      var _this2 = this;
-
-	      if (this.treeEnable) {
-	        if (this.options.rootParentId === item[this.options.parentIdField] || !item[this.options.parentIdField]) {
-	          if (item._level === undefined) {
-	            item._level = 0;
-	          } // jquery.treegrid.js
-
-
-	          this.options.rowStyle = function (item, idx) {
-	            var res = _this2._rowStyle(item, idx);
-
-	            var x = item[_this2.options.idField] ? item[_this2.options.idField] : 0;
-	            res.classes = [res.classes || '', "treegrid-".concat(x)].join(' ');
-	            return res;
-	          };
-
-	          this.initTr(item, idx, data, parentDom);
-	          return true;
-	        }
-
-	        return false;
+	        this.initTr(item, idx, data, parentDom);
+	        return true;
 	      }
 
-	      return _get(_getPrototypeOf(_class.prototype), "initRow", this).call(this, item, idx, data, parentDom);
+	      return false;
 	    }
-	  }]);
+
+	    return _$$BootstrapTable.prototype.initRow.call(this, item, idx, data, parentDom);
+	  };
 
 	  return _class;
 	}($.BootstrapTable);

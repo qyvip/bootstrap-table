@@ -12,7 +12,6 @@
 		return module = { exports: {} }, fn(module, module.exports), module.exports;
 	}
 
-	var O = 'object';
 	var check = function (it) {
 	  return it && it.Math == Math && it;
 	};
@@ -20,10 +19,10 @@
 	// https://github.com/zloirock/core-js/issues/86#issuecomment-115759028
 	var global_1 =
 	  // eslint-disable-next-line no-undef
-	  check(typeof globalThis == O && globalThis) ||
-	  check(typeof window == O && window) ||
-	  check(typeof self == O && self) ||
-	  check(typeof commonjsGlobal == O && commonjsGlobal) ||
+	  check(typeof globalThis == 'object' && globalThis) ||
+	  check(typeof window == 'object' && window) ||
+	  check(typeof self == 'object' && self) ||
+	  check(typeof commonjsGlobal == 'object' && commonjsGlobal) ||
 	  // eslint-disable-next-line no-new-func
 	  Function('return this')();
 
@@ -179,7 +178,7 @@
 		f: f$2
 	};
 
-	var hide = descriptors ? function (object, key, value) {
+	var createNonEnumerableProperty = descriptors ? function (object, key, value) {
 	  return objectDefineProperty.f(object, key, createPropertyDescriptor(1, value));
 	} : function (object, key, value) {
 	  object[key] = value;
@@ -188,20 +187,22 @@
 
 	var setGlobal = function (key, value) {
 	  try {
-	    hide(global_1, key, value);
+	    createNonEnumerableProperty(global_1, key, value);
 	  } catch (error) {
 	    global_1[key] = value;
 	  } return value;
 	};
 
-	var shared = createCommonjsModule(function (module) {
 	var SHARED = '__core-js_shared__';
 	var store = global_1[SHARED] || setGlobal(SHARED, {});
 
+	var sharedStore = store;
+
+	var shared = createCommonjsModule(function (module) {
 	(module.exports = function (key, value) {
-	  return store[key] || (store[key] = value !== undefined ? value : {});
+	  return sharedStore[key] || (sharedStore[key] = value !== undefined ? value : {});
 	})('versions', []).push({
-	  version: '3.1.3',
+	  version: '3.3.2',
 	  mode:  'global',
 	  copyright: '© 2019 Denis Pushkarev (zloirock.ru)'
 	});
@@ -245,25 +246,25 @@
 	};
 
 	if (nativeWeakMap) {
-	  var store = new WeakMap$1();
-	  var wmget = store.get;
-	  var wmhas = store.has;
-	  var wmset = store.set;
+	  var store$1 = new WeakMap$1();
+	  var wmget = store$1.get;
+	  var wmhas = store$1.has;
+	  var wmset = store$1.set;
 	  set = function (it, metadata) {
-	    wmset.call(store, it, metadata);
+	    wmset.call(store$1, it, metadata);
 	    return metadata;
 	  };
 	  get = function (it) {
-	    return wmget.call(store, it) || {};
+	    return wmget.call(store$1, it) || {};
 	  };
 	  has$1 = function (it) {
-	    return wmhas.call(store, it);
+	    return wmhas.call(store$1, it);
 	  };
 	} else {
 	  var STATE = sharedKey('state');
 	  hiddenKeys[STATE] = true;
 	  set = function (it, metadata) {
-	    hide(it, STATE, metadata);
+	    createNonEnumerableProperty(it, STATE, metadata);
 	    return metadata;
 	  };
 	  get = function (it) {
@@ -296,7 +297,7 @@
 	  var simple = options ? !!options.enumerable : false;
 	  var noTargetGet = options ? !!options.noTargetGet : false;
 	  if (typeof value == 'function') {
-	    if (typeof key == 'string' && !has(value, 'name')) hide(value, 'name', key);
+	    if (typeof key == 'string' && !has(value, 'name')) createNonEnumerableProperty(value, 'name', key);
 	    enforceInternalState(value).source = TEMPLATE.join(typeof key == 'string' ? key : '');
 	  }
 	  if (O === global_1) {
@@ -309,7 +310,7 @@
 	    simple = true;
 	  }
 	  if (simple) O[key] = value;
-	  else hide(O, key, value);
+	  else createNonEnumerableProperty(O, key, value);
 	// add fake Function#toString for correct work wrapped methods / constructors with methods like LoDash isNative
 	})(Function.prototype, 'toString', function toString() {
 	  return typeof this == 'function' && getInternalState(this).source || functionToString.call(this);
@@ -513,7 +514,7 @@
 	    }
 	    // add a flag to not completely full polyfills
 	    if (options.sham || (targetProperty && targetProperty.sham)) {
-	      hide(sourceProperty, 'sham', true);
+	      createNonEnumerableProperty(sourceProperty, 'sham', true);
 	    }
 	    // extend global
 	    redefine(target, key, sourceProperty, options);
@@ -628,10 +629,10 @@
 	};
 
 	var Symbol$1 = global_1.Symbol;
-	var store$1 = shared('wks');
+	var store$2 = shared('wks');
 
 	var wellKnownSymbol = function (name) {
-	  return store$1[name] || (store$1[name] = nativeSymbol && Symbol$1[name]
+	  return store$2[name] || (store$2[name] = nativeSymbol && Symbol$1[name]
 	    || (nativeSymbol ? Symbol$1 : uid)('Symbol.' + name));
 	};
 
@@ -1027,7 +1028,9 @@
 
 	// `Symbol.prototype[@@toPrimitive]` method
 	// https://tc39.github.io/ecma262/#sec-symbol.prototype-@@toprimitive
-	if (!$Symbol[PROTOTYPE$1][TO_PRIMITIVE]) hide($Symbol[PROTOTYPE$1], TO_PRIMITIVE, $Symbol[PROTOTYPE$1].valueOf);
+	if (!$Symbol[PROTOTYPE$1][TO_PRIMITIVE]) {
+	  createNonEnumerableProperty($Symbol[PROTOTYPE$1], TO_PRIMITIVE, $Symbol[PROTOTYPE$1].valueOf);
+	}
 	// `Symbol.prototype[@@toStringTag]` property
 	// https://tc39.github.io/ecma262/#sec-symbol.prototype-@@tostringtag
 	setToStringTag($Symbol, SYMBOL);
@@ -1163,7 +1166,7 @@
 	// Array.prototype[@@unscopables]
 	// https://tc39.github.io/ecma262/#sec-array.prototype-@@unscopables
 	if (ArrayPrototype[UNSCOPABLES] == undefined) {
-	  hide(ArrayPrototype, UNSCOPABLES, objectCreate(null));
+	  createNonEnumerableProperty(ArrayPrototype, UNSCOPABLES, objectCreate(null));
 	}
 
 	// add a key to Array.prototype[@@unscopables]
@@ -1190,6 +1193,12 @@
 
 	// https://tc39.github.io/ecma262/#sec-array.prototype-@@unscopables
 	addToUnscopables(FIND);
+
+	// `Array.isArray` method
+	// https://tc39.github.io/ecma262/#sec-array.isarray
+	_export({ target: 'Array', stat: true }, {
+	  isArray: isArray
+	});
 
 	var correctPrototypeGetter = !fails(function () {
 	  function F() { /* empty */ }
@@ -1232,7 +1241,9 @@
 	if (IteratorPrototype == undefined) IteratorPrototype = {};
 
 	// 25.1.2.1.1 %IteratorPrototype%[@@iterator]()
-	if ( !has(IteratorPrototype, ITERATOR)) hide(IteratorPrototype, ITERATOR, returnThis);
+	if ( !has(IteratorPrototype, ITERATOR)) {
+	  createNonEnumerableProperty(IteratorPrototype, ITERATOR, returnThis);
+	}
 
 	var iteratorsCore = {
 	  IteratorPrototype: IteratorPrototype,
@@ -1316,7 +1327,7 @@
 	        if (objectSetPrototypeOf) {
 	          objectSetPrototypeOf(CurrentIteratorPrototype, IteratorPrototype$2);
 	        } else if (typeof CurrentIteratorPrototype[ITERATOR$1] != 'function') {
-	          hide(CurrentIteratorPrototype, ITERATOR$1, returnThis$1);
+	          createNonEnumerableProperty(CurrentIteratorPrototype, ITERATOR$1, returnThis$1);
 	        }
 	      }
 	      // Set @@toStringTag to native iterators
@@ -1332,7 +1343,7 @@
 
 	  // define iterator
 	  if ( IterablePrototype[ITERATOR$1] !== defaultIterator) {
-	    hide(IterablePrototype, ITERATOR$1, defaultIterator);
+	    createNonEnumerableProperty(IterablePrototype, ITERATOR$1, defaultIterator);
 	  }
 
 	  // export additional methods
@@ -1488,6 +1499,22 @@
 	  }
 	});
 
+	var DatePrototype = Date.prototype;
+	var INVALID_DATE = 'Invalid Date';
+	var TO_STRING = 'toString';
+	var nativeDateToString = DatePrototype[TO_STRING];
+	var getTime = DatePrototype.getTime;
+
+	// `Date.prototype.toString` method
+	// https://tc39.github.io/ecma262/#sec-date.prototype.tostring
+	if (new Date(NaN) + '' != INVALID_DATE) {
+	  redefine(DatePrototype, TO_STRING, function toString() {
+	    var value = getTime.call(this);
+	    // eslint-disable-next-line no-self-compare
+	    return value === value ? nativeDateToString.call(this) : INVALID_DATE;
+	  });
+	}
+
 	var TO_STRING_TAG$1 = wellKnownSymbol('toStringTag');
 	// ES3 wrong here
 	var CORRECT_ARGUMENTS = classofRaw(function () { return arguments; }()) == 'Arguments';
@@ -1630,15 +1657,17 @@
 	  if (CollectionPrototype) {
 	    // some Chrome versions have non-configurable methods on DOMTokenList
 	    if (CollectionPrototype[ITERATOR$2] !== ArrayValues) try {
-	      hide(CollectionPrototype, ITERATOR$2, ArrayValues);
+	      createNonEnumerableProperty(CollectionPrototype, ITERATOR$2, ArrayValues);
 	    } catch (error) {
 	      CollectionPrototype[ITERATOR$2] = ArrayValues;
 	    }
-	    if (!CollectionPrototype[TO_STRING_TAG$3]) hide(CollectionPrototype, TO_STRING_TAG$3, COLLECTION_NAME);
+	    if (!CollectionPrototype[TO_STRING_TAG$3]) {
+	      createNonEnumerableProperty(CollectionPrototype, TO_STRING_TAG$3, COLLECTION_NAME);
+	    }
 	    if (domIterables[COLLECTION_NAME]) for (var METHOD_NAME in es_array_iterator) {
 	      // some Chrome versions have non-configurable methods on DOMTokenList
 	      if (CollectionPrototype[METHOD_NAME] !== es_array_iterator[METHOD_NAME]) try {
-	        hide(CollectionPrototype, METHOD_NAME, es_array_iterator[METHOD_NAME]);
+	        createNonEnumerableProperty(CollectionPrototype, METHOD_NAME, es_array_iterator[METHOD_NAME]);
 	      } catch (error) {
 	        CollectionPrototype[METHOD_NAME] = es_array_iterator[METHOD_NAME];
 	      }
@@ -1646,103 +1675,10 @@
 	  }
 	}
 
-	function _classCallCheck(instance, Constructor) {
-	  if (!(instance instanceof Constructor)) {
-	    throw new TypeError("Cannot call a class as a function");
-	  }
-	}
-
-	function _defineProperties(target, props) {
-	  for (var i = 0; i < props.length; i++) {
-	    var descriptor = props[i];
-	    descriptor.enumerable = descriptor.enumerable || false;
-	    descriptor.configurable = true;
-	    if ("value" in descriptor) descriptor.writable = true;
-	    Object.defineProperty(target, descriptor.key, descriptor);
-	  }
-	}
-
-	function _createClass(Constructor, protoProps, staticProps) {
-	  if (protoProps) _defineProperties(Constructor.prototype, protoProps);
-	  if (staticProps) _defineProperties(Constructor, staticProps);
-	  return Constructor;
-	}
-
-	function _inherits(subClass, superClass) {
-	  if (typeof superClass !== "function" && superClass !== null) {
-	    throw new TypeError("Super expression must either be null or a function");
-	  }
-
-	  subClass.prototype = Object.create(superClass && superClass.prototype, {
-	    constructor: {
-	      value: subClass,
-	      writable: true,
-	      configurable: true
-	    }
-	  });
-	  if (superClass) _setPrototypeOf(subClass, superClass);
-	}
-
-	function _getPrototypeOf(o) {
-	  _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) {
-	    return o.__proto__ || Object.getPrototypeOf(o);
-	  };
-	  return _getPrototypeOf(o);
-	}
-
-	function _setPrototypeOf(o, p) {
-	  _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) {
-	    o.__proto__ = p;
-	    return o;
-	  };
-
-	  return _setPrototypeOf(o, p);
-	}
-
-	function _assertThisInitialized(self) {
-	  if (self === void 0) {
-	    throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
-	  }
-
-	  return self;
-	}
-
-	function _possibleConstructorReturn(self, call) {
-	  if (call && (typeof call === "object" || typeof call === "function")) {
-	    return call;
-	  }
-
-	  return _assertThisInitialized(self);
-	}
-
-	function _superPropBase(object, property) {
-	  while (!Object.prototype.hasOwnProperty.call(object, property)) {
-	    object = _getPrototypeOf(object);
-	    if (object === null) break;
-	  }
-
-	  return object;
-	}
-
-	function _get(target, property, receiver) {
-	  if (typeof Reflect !== "undefined" && Reflect.get) {
-	    _get = Reflect.get;
-	  } else {
-	    _get = function _get(target, property, receiver) {
-	      var base = _superPropBase(target, property);
-
-	      if (!base) return;
-	      var desc = Object.getOwnPropertyDescriptor(base, property);
-
-	      if (desc.get) {
-	        return desc.get.call(receiver);
-	      }
-
-	      return desc.value;
-	    };
-	  }
-
-	  return _get(target, property, receiver || target);
+	function _inheritsLoose(subClass, superClass) {
+	  subClass.prototype = Object.create(superClass.prototype);
+	  subClass.prototype.constructor = subClass;
+	  subClass.__proto__ = superClass;
 	}
 
 	/**
@@ -1752,7 +1688,7 @@
 	var Utils = $.fn.bootstrapTable.utils;
 
 	function printPageBuilderDefault(table) {
-	  return "\n  <html>\n  <head>\n  <style type=\"text/css\" media=\"print\">\n  @page {\n    size: auto;\n    margin: 25px 0 25px 0;\n  }\n  </style>\n  <style type=\"text/css\" media=\"all\">\n  table {\n    border-collapse: collapse;\n    font-size: 12px;\n  }\n  table, th, td {\n    border: 1px solid grey;\n  }\n  th, td {\n    text-align: center;\n    vertical-align: middle;\n  }\n  p {\n    font-weight: bold;\n    margin-left:20px;\n  }\n  table {\n    width:94%;\n    margin-left:3%;\n    margin-right:3%;\n  }\n  div.bs-table-print {\n    text-align:center;\n  }\n  </style>\n  </head>\n  <title>Print Table</title>\n  <body>\n  <p>Printed on: ".concat(new Date(), " </p>\n  <div class=\"bs-table-print\">").concat(table, "</div>\n  </body>\n  </html>");
+	  return "\n  <html>\n  <head>\n  <style type=\"text/css\" media=\"print\">\n  @page {\n    size: auto;\n    margin: 25px 0 25px 0;\n  }\n  </style>\n  <style type=\"text/css\" media=\"all\">\n  table {\n    border-collapse: collapse;\n    font-size: 12px;\n  }\n  table, th, td {\n    border: 1px solid grey;\n  }\n  th, td {\n    text-align: center;\n    vertical-align: middle;\n  }\n  p {\n    font-weight: bold;\n    margin-left:20px;\n  }\n  table {\n    width:94%;\n    margin-left:3%;\n    margin-right:3%;\n  }\n  div.bs-table-print {\n    text-align:center;\n  }\n  </style>\n  </head>\n  <title>Print Table</title>\n  <body>\n  <p>Printed on: " + new Date() + " </p>\n  <div class=\"bs-table-print\">" + table + "</div>\n  </body>\n  </html>";
 	}
 
 	$.extend($.fn.bootstrapTable.defaults, {
@@ -1778,181 +1714,163 @@
 	$.BootstrapTable =
 	/*#__PURE__*/
 	function (_$$BootstrapTable) {
-	  _inherits(_class, _$$BootstrapTable);
+	  _inheritsLoose(_class, _$$BootstrapTable);
 
 	  function _class() {
-	    _classCallCheck(this, _class);
-
-	    return _possibleConstructorReturn(this, _getPrototypeOf(_class).apply(this, arguments));
+	    return _$$BootstrapTable.apply(this, arguments) || this;
 	  }
 
-	  _createClass(_class, [{
-	    key: "initToolbar",
-	    value: function initToolbar() {
-	      var _get2,
-	          _this = this;
+	  var _proto = _class.prototype;
 
-	      this.showToolbar = this.showToolbar || this.options.showPrint;
+	  _proto.initToolbar = function initToolbar() {
+	    var _$$BootstrapTable$pro,
+	        _this = this;
 
-	      for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
-	        args[_key] = arguments[_key];
+	    this.showToolbar = this.showToolbar || this.options.showPrint;
+
+	    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+	      args[_key] = arguments[_key];
+	    }
+
+	    (_$$BootstrapTable$pro = _$$BootstrapTable.prototype.initToolbar).call.apply(_$$BootstrapTable$pro, [this].concat(args));
+
+	    if (!this.options.showPrint) {
+	      return;
+	    }
+
+	    var $btnGroup = this.$toolbar.find('>.columns');
+	    var $print = $btnGroup.find('button.bs-print');
+
+	    if (!$print.length) {
+	      $print = $("\n        <button class=\"" + this.constants.buttonsClass + " bs-print\" type=\"button\">\n        <i class=\"" + this.options.iconsPrefix + " " + this.options.icons.print + "\"></i>\n        </button>").appendTo($btnGroup);
+	    }
+
+	    $print.off('click').on('click', function () {
+	      _this.doPrint(_this.options.printAsFilteredAndSortedOnUI ? _this.getData() : _this.options.data.slice(0));
+	    });
+	  };
+
+	  _proto.doPrint = function doPrint(data) {
+	    var _this2 = this;
+
+	    var formatValue = function formatValue(row, i, column) {
+	      var value = row[column.field];
+
+	      if (typeof column.printFormatter === 'function') {
+	        return column.printFormatter.apply(column, [value, row, i]);
 	      }
 
-	      (_get2 = _get(_getPrototypeOf(_class.prototype), "initToolbar", this)).call.apply(_get2, [this].concat(args));
+	      return typeof value === 'undefined' ? '-' : value;
+	    };
 
-	      if (!this.options.showPrint) {
-	        return;
+	    var buildTable = function buildTable(data, columnsArray) {
+	      var dir = _this2.$el.attr('dir') || 'ltr';
+	      var html = ["<table dir=\"" + dir + "\"><thead>"];
+
+	      for (var _iterator = columnsArray, _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _iterator[Symbol.iterator]();;) {
+	        var _ref;
+
+	        if (_isArray) {
+	          if (_i >= _iterator.length) break;
+	          _ref = _iterator[_i++];
+	        } else {
+	          _i = _iterator.next();
+	          if (_i.done) break;
+	          _ref = _i.value;
+	        }
+
+	        var _columns = _ref;
+	        html.push('<tr>');
+
+	        for (var h = 0; h < _columns.length; h++) {
+	          if (!_columns[h].printIgnore) {
+	            html.push("<th\n              " + Utils.sprintf(' rowspan="%s"', _columns[h].rowspan) + "\n              " + Utils.sprintf(' colspan="%s"', _columns[h].colspan) + "\n              >" + _columns[h].title + "</th>");
+	          }
+	        }
+
+	        html.push('</tr>');
 	      }
 
-	      var $btnGroup = this.$toolbar.find('>.columns');
-	      var $print = $btnGroup.find('button.bs-print');
+	      html.push('</thead><tbody>');
 
-	      if (!$print.length) {
-	        $print = $("\n        <button class=\"".concat(this.constants.buttonsClass, " bs-print\" type=\"button\">\n        <i class=\"").concat(this.options.iconsPrefix, " ").concat(this.options.icons.print, "\"></i>\n        </button>")).appendTo($btnGroup);
+	      for (var i = 0; i < data.length; i++) {
+	        html.push('<tr>');
+
+	        for (var _iterator2 = columnsArray, _isArray2 = Array.isArray(_iterator2), _i2 = 0, _iterator2 = _isArray2 ? _iterator2 : _iterator2[Symbol.iterator]();;) {
+	          var _ref2;
+
+	          if (_isArray2) {
+	            if (_i2 >= _iterator2.length) break;
+	            _ref2 = _iterator2[_i2++];
+	          } else {
+	            _i2 = _iterator2.next();
+	            if (_i2.done) break;
+	            _ref2 = _i2.value;
+	          }
+
+	          var columns = _ref2;
+
+	          for (var j = 0; j < columns.length; j++) {
+	            if (!columns[j].printIgnore && columns[j].field) {
+	              html.push('<td>', formatValue(data[i], i, columns[j]), '</td>');
+	            }
+	          }
+	        }
+
+	        html.push('</tr>');
 	      }
 
-	      $print.off('click').on('click', function () {
-	        _this.doPrint(_this.options.printAsFilteredAndSortedOnUI ? _this.getData() : _this.options.data.slice(0));
+	      html.push('</tbody></table>');
+	      return html.join('');
+	    };
+
+	    var sortRows = function sortRows(data, colName, sortOrder) {
+	      if (!colName) {
+	        return data;
+	      }
+
+	      var reverse = sortOrder !== 'asc';
+	      reverse = -(+reverse || -1);
+	      return data.sort(function (a, b) {
+	        return reverse * a[colName].localeCompare(b[colName]);
 	      });
-	    }
-	  }, {
-	    key: "doPrint",
-	    value: function doPrint(data) {
-	      var _this2 = this;
+	    };
 
-	      var formatValue = function formatValue(row, i, column) {
-	        var value = row[column.field];
-
-	        if (typeof column.printFormatter === 'function') {
-	          return column.printFormatter.apply(column, [value, row, i]);
+	    var filterRow = function filterRow(row, filters) {
+	      for (var index = 0; index < filters.length; ++index) {
+	        if (row[filters[index].colName] !== filters[index].value) {
+	          return false;
 	        }
+	      }
 
-	        return typeof value === 'undefined' ? '-' : value;
-	      };
+	      return true;
+	    };
 
-	      var buildTable = function buildTable(data, columnsArray) {
-	        var dir = _this2.$el.attr('dir') || 'ltr';
-	        var html = ["<table dir=\"".concat(dir, "\"><thead>")];
-	        var _iteratorNormalCompletion = true;
-	        var _didIteratorError = false;
-	        var _iteratorError = undefined;
+	    var filterRows = function filterRows(data, filters) {
+	      return data.filter(function (row) {
+	        return filterRow(row, filters);
+	      });
+	    };
 
-	        try {
-	          for (var _iterator = columnsArray[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-	            var _columns = _step.value;
-	            html.push('<tr>');
+	    var getColumnFilters = function getColumnFilters(columns) {
+	      return !columns || !columns[0] ? [] : columns[0].filter(function (col) {
+	        return col.printFilter;
+	      }).map(function (col) {
+	        return {
+	          colName: col.field,
+	          value: col.printFilter
+	        };
+	      });
+	    };
 
-	            for (var h = 0; h < _columns.length; h++) {
-	              if (!_columns[h].printIgnore) {
-	                html.push("<th\n              ".concat(Utils.sprintf(' rowspan="%s"', _columns[h].rowspan), "\n              ").concat(Utils.sprintf(' colspan="%s"', _columns[h].colspan), "\n              >").concat(_columns[h].title, "</th>"));
-	              }
-	            }
-
-	            html.push('</tr>');
-	          }
-	        } catch (err) {
-	          _didIteratorError = true;
-	          _iteratorError = err;
-	        } finally {
-	          try {
-	            if (!_iteratorNormalCompletion && _iterator.return != null) {
-	              _iterator.return();
-	            }
-	          } finally {
-	            if (_didIteratorError) {
-	              throw _iteratorError;
-	            }
-	          }
-	        }
-
-	        html.push('</thead><tbody>');
-
-	        for (var i = 0; i < data.length; i++) {
-	          html.push('<tr>');
-	          var _iteratorNormalCompletion2 = true;
-	          var _didIteratorError2 = false;
-	          var _iteratorError2 = undefined;
-
-	          try {
-	            for (var _iterator2 = columnsArray[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-	              var columns = _step2.value;
-
-	              for (var j = 0; j < columns.length; j++) {
-	                if (!columns[j].printIgnore && columns[j].field) {
-	                  html.push('<td>', formatValue(data[i], i, columns[j]), '</td>');
-	                }
-	              }
-	            }
-	          } catch (err) {
-	            _didIteratorError2 = true;
-	            _iteratorError2 = err;
-	          } finally {
-	            try {
-	              if (!_iteratorNormalCompletion2 && _iterator2.return != null) {
-	                _iterator2.return();
-	              }
-	            } finally {
-	              if (_didIteratorError2) {
-	                throw _iteratorError2;
-	              }
-	            }
-	          }
-
-	          html.push('</tr>');
-	        }
-
-	        html.push('</tbody></table>');
-	        return html.join('');
-	      };
-
-	      var sortRows = function sortRows(data, colName, sortOrder) {
-	        if (!colName) {
-	          return data;
-	        }
-
-	        var reverse = sortOrder !== 'asc';
-	        reverse = -(+reverse || -1);
-	        return data.sort(function (a, b) {
-	          return reverse * a[colName].localeCompare(b[colName]);
-	        });
-	      };
-
-	      var filterRow = function filterRow(row, filters) {
-	        for (var index = 0; index < filters.length; ++index) {
-	          if (row[filters[index].colName] !== filters[index].value) {
-	            return false;
-	          }
-	        }
-
-	        return true;
-	      };
-
-	      var filterRows = function filterRows(data, filters) {
-	        return data.filter(function (row) {
-	          return filterRow(row, filters);
-	        });
-	      };
-
-	      var getColumnFilters = function getColumnFilters(columns) {
-	        return !columns || !columns[0] ? [] : columns[0].filter(function (col) {
-	          return col.printFilter;
-	        }).map(function (col) {
-	          return {
-	            colName: col.field,
-	            value: col.printFilter
-	          };
-	        });
-	      };
-
-	      data = filterRows(data, getColumnFilters(this.options.columns));
-	      data = sortRows(data, this.options.printSortColumn, this.options.printSortOrder);
-	      var table = buildTable(data, this.options.columns);
-	      var newWin = window.open('');
-	      newWin.document.write(this.options.printPageBuilder.call(this, table));
-	      newWin.print();
-	      newWin.close();
-	    }
-	  }]);
+	    data = filterRows(data, getColumnFilters(this.options.columns));
+	    data = sortRows(data, this.options.printSortColumn, this.options.printSortOrder);
+	    var table = buildTable(data, this.options.columns);
+	    var newWin = window.open('');
+	    newWin.document.write(this.options.printPageBuilder.call(this, table));
+	    newWin.print();
+	    newWin.close();
+	  };
 
 	  return _class;
 	}($.BootstrapTable);

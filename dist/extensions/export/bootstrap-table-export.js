@@ -12,7 +12,6 @@
 		return module = { exports: {} }, fn(module, module.exports), module.exports;
 	}
 
-	var O = 'object';
 	var check = function (it) {
 	  return it && it.Math == Math && it;
 	};
@@ -20,10 +19,10 @@
 	// https://github.com/zloirock/core-js/issues/86#issuecomment-115759028
 	var global_1 =
 	  // eslint-disable-next-line no-undef
-	  check(typeof globalThis == O && globalThis) ||
-	  check(typeof window == O && window) ||
-	  check(typeof self == O && self) ||
-	  check(typeof commonjsGlobal == O && commonjsGlobal) ||
+	  check(typeof globalThis == 'object' && globalThis) ||
+	  check(typeof window == 'object' && window) ||
+	  check(typeof self == 'object' && self) ||
+	  check(typeof commonjsGlobal == 'object' && commonjsGlobal) ||
 	  // eslint-disable-next-line no-new-func
 	  Function('return this')();
 
@@ -179,7 +178,7 @@
 		f: f$2
 	};
 
-	var hide = descriptors ? function (object, key, value) {
+	var createNonEnumerableProperty = descriptors ? function (object, key, value) {
 	  return objectDefineProperty.f(object, key, createPropertyDescriptor(1, value));
 	} : function (object, key, value) {
 	  object[key] = value;
@@ -188,20 +187,22 @@
 
 	var setGlobal = function (key, value) {
 	  try {
-	    hide(global_1, key, value);
+	    createNonEnumerableProperty(global_1, key, value);
 	  } catch (error) {
 	    global_1[key] = value;
 	  } return value;
 	};
 
-	var shared = createCommonjsModule(function (module) {
 	var SHARED = '__core-js_shared__';
 	var store = global_1[SHARED] || setGlobal(SHARED, {});
 
+	var sharedStore = store;
+
+	var shared = createCommonjsModule(function (module) {
 	(module.exports = function (key, value) {
-	  return store[key] || (store[key] = value !== undefined ? value : {});
+	  return sharedStore[key] || (sharedStore[key] = value !== undefined ? value : {});
 	})('versions', []).push({
-	  version: '3.1.3',
+	  version: '3.3.2',
 	  mode:  'global',
 	  copyright: '© 2019 Denis Pushkarev (zloirock.ru)'
 	});
@@ -245,25 +246,25 @@
 	};
 
 	if (nativeWeakMap) {
-	  var store = new WeakMap$1();
-	  var wmget = store.get;
-	  var wmhas = store.has;
-	  var wmset = store.set;
+	  var store$1 = new WeakMap$1();
+	  var wmget = store$1.get;
+	  var wmhas = store$1.has;
+	  var wmset = store$1.set;
 	  set = function (it, metadata) {
-	    wmset.call(store, it, metadata);
+	    wmset.call(store$1, it, metadata);
 	    return metadata;
 	  };
 	  get = function (it) {
-	    return wmget.call(store, it) || {};
+	    return wmget.call(store$1, it) || {};
 	  };
 	  has$1 = function (it) {
-	    return wmhas.call(store, it);
+	    return wmhas.call(store$1, it);
 	  };
 	} else {
 	  var STATE = sharedKey('state');
 	  hiddenKeys[STATE] = true;
 	  set = function (it, metadata) {
-	    hide(it, STATE, metadata);
+	    createNonEnumerableProperty(it, STATE, metadata);
 	    return metadata;
 	  };
 	  get = function (it) {
@@ -296,7 +297,7 @@
 	  var simple = options ? !!options.enumerable : false;
 	  var noTargetGet = options ? !!options.noTargetGet : false;
 	  if (typeof value == 'function') {
-	    if (typeof key == 'string' && !has(value, 'name')) hide(value, 'name', key);
+	    if (typeof key == 'string' && !has(value, 'name')) createNonEnumerableProperty(value, 'name', key);
 	    enforceInternalState(value).source = TEMPLATE.join(typeof key == 'string' ? key : '');
 	  }
 	  if (O === global_1) {
@@ -309,7 +310,7 @@
 	    simple = true;
 	  }
 	  if (simple) O[key] = value;
-	  else hide(O, key, value);
+	  else createNonEnumerableProperty(O, key, value);
 	// add fake Function#toString for correct work wrapped methods / constructors with methods like LoDash isNative
 	})(Function.prototype, 'toString', function toString() {
 	  return typeof this == 'function' && getInternalState(this).source || functionToString.call(this);
@@ -513,7 +514,7 @@
 	    }
 	    // add a flag to not completely full polyfills
 	    if (options.sham || (targetProperty && targetProperty.sham)) {
-	      hide(sourceProperty, 'sham', true);
+	      createNonEnumerableProperty(sourceProperty, 'sham', true);
 	    }
 	    // extend global
 	    redefine(target, key, sourceProperty, options);
@@ -628,10 +629,10 @@
 	};
 
 	var Symbol$1 = global_1.Symbol;
-	var store$1 = shared('wks');
+	var store$2 = shared('wks');
 
 	var wellKnownSymbol = function (name) {
-	  return store$1[name] || (store$1[name] = nativeSymbol && Symbol$1[name]
+	  return store$2[name] || (store$2[name] = nativeSymbol && Symbol$1[name]
 	    || (nativeSymbol ? Symbol$1 : uid)('Symbol.' + name));
 	};
 
@@ -1027,7 +1028,9 @@
 
 	// `Symbol.prototype[@@toPrimitive]` method
 	// https://tc39.github.io/ecma262/#sec-symbol.prototype-@@toprimitive
-	if (!$Symbol[PROTOTYPE$1][TO_PRIMITIVE]) hide($Symbol[PROTOTYPE$1], TO_PRIMITIVE, $Symbol[PROTOTYPE$1].valueOf);
+	if (!$Symbol[PROTOTYPE$1][TO_PRIMITIVE]) {
+	  createNonEnumerableProperty($Symbol[PROTOTYPE$1], TO_PRIMITIVE, $Symbol[PROTOTYPE$1].valueOf);
+	}
 	// `Symbol.prototype[@@toStringTag]` property
 	// https://tc39.github.io/ecma262/#sec-symbol.prototype-@@tostringtag
 	setToStringTag($Symbol, SYMBOL);
@@ -1151,7 +1154,7 @@
 	// Array.prototype[@@unscopables]
 	// https://tc39.github.io/ecma262/#sec-array.prototype-@@unscopables
 	if (ArrayPrototype[UNSCOPABLES] == undefined) {
-	  hide(ArrayPrototype, UNSCOPABLES, objectCreate(null));
+	  createNonEnumerableProperty(ArrayPrototype, UNSCOPABLES, objectCreate(null));
 	}
 
 	// add a key to Array.prototype[@@unscopables]
@@ -1178,6 +1181,35 @@
 
 	// https://tc39.github.io/ecma262/#sec-array.prototype-@@unscopables
 	addToUnscopables(FIND);
+
+	var sloppyArrayMethod = function (METHOD_NAME, argument) {
+	  var method = [][METHOD_NAME];
+	  return !method || !fails(function () {
+	    // eslint-disable-next-line no-useless-call,no-throw-literal
+	    method.call(null, argument || function () { throw 1; }, 1);
+	  });
+	};
+
+	var $forEach$1 = arrayIteration.forEach;
+
+
+	// `Array.prototype.forEach` method implementation
+	// https://tc39.github.io/ecma262/#sec-array.prototype.foreach
+	var arrayForEach = sloppyArrayMethod('forEach') ? function forEach(callbackfn /* , thisArg */) {
+	  return $forEach$1(this, callbackfn, arguments.length > 1 ? arguments[1] : undefined);
+	} : [].forEach;
+
+	// `Array.prototype.forEach` method
+	// https://tc39.github.io/ecma262/#sec-array.prototype.foreach
+	_export({ target: 'Array', proto: true, forced: [].forEach != arrayForEach }, {
+	  forEach: arrayForEach
+	});
+
+	// `Array.isArray` method
+	// https://tc39.github.io/ecma262/#sec-array.isarray
+	_export({ target: 'Array', stat: true }, {
+	  isArray: isArray
+	});
 
 	var correctPrototypeGetter = !fails(function () {
 	  function F() { /* empty */ }
@@ -1220,7 +1252,9 @@
 	if (IteratorPrototype == undefined) IteratorPrototype = {};
 
 	// 25.1.2.1.1 %IteratorPrototype%[@@iterator]()
-	if ( !has(IteratorPrototype, ITERATOR)) hide(IteratorPrototype, ITERATOR, returnThis);
+	if ( !has(IteratorPrototype, ITERATOR)) {
+	  createNonEnumerableProperty(IteratorPrototype, ITERATOR, returnThis);
+	}
 
 	var iteratorsCore = {
 	  IteratorPrototype: IteratorPrototype,
@@ -1304,7 +1338,7 @@
 	        if (objectSetPrototypeOf) {
 	          objectSetPrototypeOf(CurrentIteratorPrototype, IteratorPrototype$2);
 	        } else if (typeof CurrentIteratorPrototype[ITERATOR$1] != 'function') {
-	          hide(CurrentIteratorPrototype, ITERATOR$1, returnThis$1);
+	          createNonEnumerableProperty(CurrentIteratorPrototype, ITERATOR$1, returnThis$1);
 	        }
 	      }
 	      // Set @@toStringTag to native iterators
@@ -1320,7 +1354,7 @@
 
 	  // define iterator
 	  if ( IterablePrototype[ITERATOR$1] !== defaultIterator) {
-	    hide(IterablePrototype, ITERATOR$1, defaultIterator);
+	    createNonEnumerableProperty(IterablePrototype, ITERATOR$1, defaultIterator);
 	  }
 
 	  // export additional methods
@@ -1381,14 +1415,6 @@
 	addToUnscopables('keys');
 	addToUnscopables('values');
 	addToUnscopables('entries');
-
-	var sloppyArrayMethod = function (METHOD_NAME, argument) {
-	  var method = [][METHOD_NAME];
-	  return !method || !fails(function () {
-	    // eslint-disable-next-line no-useless-call,no-throw-literal
-	    method.call(null, argument || function () { throw 1; }, 1);
-	  });
-	};
 
 	var nativeJoin = [].join;
 
@@ -1492,60 +1518,6 @@
 	  redefine(ObjectPrototype$2, 'toString', objectToString, { unsafe: true });
 	}
 
-	// `String.prototype.{ codePointAt, at }` methods implementation
-	var createMethod$2 = function (CONVERT_TO_STRING) {
-	  return function ($this, pos) {
-	    var S = String(requireObjectCoercible($this));
-	    var position = toInteger(pos);
-	    var size = S.length;
-	    var first, second;
-	    if (position < 0 || position >= size) return CONVERT_TO_STRING ? '' : undefined;
-	    first = S.charCodeAt(position);
-	    return first < 0xD800 || first > 0xDBFF || position + 1 === size
-	      || (second = S.charCodeAt(position + 1)) < 0xDC00 || second > 0xDFFF
-	        ? CONVERT_TO_STRING ? S.charAt(position) : first
-	        : CONVERT_TO_STRING ? S.slice(position, position + 2) : (first - 0xD800 << 10) + (second - 0xDC00) + 0x10000;
-	  };
-	};
-
-	var stringMultibyte = {
-	  // `String.prototype.codePointAt` method
-	  // https://tc39.github.io/ecma262/#sec-string.prototype.codepointat
-	  codeAt: createMethod$2(false),
-	  // `String.prototype.at` method
-	  // https://github.com/mathiasbynens/String.prototype.at
-	  charAt: createMethod$2(true)
-	};
-
-	var charAt = stringMultibyte.charAt;
-
-
-
-	var STRING_ITERATOR = 'String Iterator';
-	var setInternalState$2 = internalState.set;
-	var getInternalState$2 = internalState.getterFor(STRING_ITERATOR);
-
-	// `String.prototype[@@iterator]` method
-	// https://tc39.github.io/ecma262/#sec-string.prototype-@@iterator
-	defineIterator(String, 'String', function (iterated) {
-	  setInternalState$2(this, {
-	    type: STRING_ITERATOR,
-	    string: String(iterated),
-	    index: 0
-	  });
-	// `%StringIteratorPrototype%.next` method
-	// https://tc39.github.io/ecma262/#sec-%stringiteratorprototype%.next
-	}, function next() {
-	  var state = getInternalState$2(this);
-	  var string = state.string;
-	  var index = state.index;
-	  var point;
-	  if (index >= string.length) return { value: undefined, done: true };
-	  point = charAt(string, index);
-	  state.index += point.length;
-	  return { value: point, done: false };
-	});
-
 	// `RegExp.prototype.flags` getter implementation
 	// https://tc39.github.io/ecma262/#sec-get-regexp.prototype.flags
 	var regexpFlags = function () {
@@ -1611,6 +1583,64 @@
 	}
 
 	var regexpExec = patchedExec;
+
+	_export({ target: 'RegExp', proto: true, forced: /./.exec !== regexpExec }, {
+	  exec: regexpExec
+	});
+
+	// `String.prototype.{ codePointAt, at }` methods implementation
+	var createMethod$2 = function (CONVERT_TO_STRING) {
+	  return function ($this, pos) {
+	    var S = String(requireObjectCoercible($this));
+	    var position = toInteger(pos);
+	    var size = S.length;
+	    var first, second;
+	    if (position < 0 || position >= size) return CONVERT_TO_STRING ? '' : undefined;
+	    first = S.charCodeAt(position);
+	    return first < 0xD800 || first > 0xDBFF || position + 1 === size
+	      || (second = S.charCodeAt(position + 1)) < 0xDC00 || second > 0xDFFF
+	        ? CONVERT_TO_STRING ? S.charAt(position) : first
+	        : CONVERT_TO_STRING ? S.slice(position, position + 2) : (first - 0xD800 << 10) + (second - 0xDC00) + 0x10000;
+	  };
+	};
+
+	var stringMultibyte = {
+	  // `String.prototype.codePointAt` method
+	  // https://tc39.github.io/ecma262/#sec-string.prototype.codepointat
+	  codeAt: createMethod$2(false),
+	  // `String.prototype.at` method
+	  // https://github.com/mathiasbynens/String.prototype.at
+	  charAt: createMethod$2(true)
+	};
+
+	var charAt = stringMultibyte.charAt;
+
+
+
+	var STRING_ITERATOR = 'String Iterator';
+	var setInternalState$2 = internalState.set;
+	var getInternalState$2 = internalState.getterFor(STRING_ITERATOR);
+
+	// `String.prototype[@@iterator]` method
+	// https://tc39.github.io/ecma262/#sec-string.prototype-@@iterator
+	defineIterator(String, 'String', function (iterated) {
+	  setInternalState$2(this, {
+	    type: STRING_ITERATOR,
+	    string: String(iterated),
+	    index: 0
+	  });
+	// `%StringIteratorPrototype%.next` method
+	// https://tc39.github.io/ecma262/#sec-%stringiteratorprototype%.next
+	}, function next() {
+	  var state = getInternalState$2(this);
+	  var string = state.string;
+	  var index = state.index;
+	  var point;
+	  if (index >= string.length) return { value: undefined, done: true };
+	  point = charAt(string, index);
+	  state.index += point.length;
+	  return { value: point, done: false };
+	});
 
 	var SPECIES$3 = wellKnownSymbol('species');
 
@@ -1695,7 +1725,7 @@
 	      // 21.2.5.9 RegExp.prototype[@@search](string)
 	      : function (string) { return regexMethod.call(string, this); }
 	    );
-	    if (sham) hide(RegExp.prototype[SYMBOL], 'sham', true);
+	    if (sham) createNonEnumerableProperty(RegExp.prototype[SYMBOL], 'sham', true);
 	  }
 	};
 
@@ -2021,21 +2051,12 @@
 	  TouchList: 0
 	};
 
-	var $forEach$1 = arrayIteration.forEach;
-
-
-	// `Array.prototype.forEach` method implementation
-	// https://tc39.github.io/ecma262/#sec-array.prototype.foreach
-	var arrayForEach = sloppyArrayMethod('forEach') ? function forEach(callbackfn /* , thisArg */) {
-	  return $forEach$1(this, callbackfn, arguments.length > 1 ? arguments[1] : undefined);
-	} : [].forEach;
-
 	for (var COLLECTION_NAME in domIterables) {
 	  var Collection = global_1[COLLECTION_NAME];
 	  var CollectionPrototype = Collection && Collection.prototype;
 	  // some Chrome versions have non-configurable methods on DOMTokenList
 	  if (CollectionPrototype && CollectionPrototype.forEach !== arrayForEach) try {
-	    hide(CollectionPrototype, 'forEach', arrayForEach);
+	    createNonEnumerableProperty(CollectionPrototype, 'forEach', arrayForEach);
 	  } catch (error) {
 	    CollectionPrototype.forEach = arrayForEach;
 	  }
@@ -2051,15 +2072,17 @@
 	  if (CollectionPrototype$1) {
 	    // some Chrome versions have non-configurable methods on DOMTokenList
 	    if (CollectionPrototype$1[ITERATOR$2] !== ArrayValues) try {
-	      hide(CollectionPrototype$1, ITERATOR$2, ArrayValues);
+	      createNonEnumerableProperty(CollectionPrototype$1, ITERATOR$2, ArrayValues);
 	    } catch (error) {
 	      CollectionPrototype$1[ITERATOR$2] = ArrayValues;
 	    }
-	    if (!CollectionPrototype$1[TO_STRING_TAG$3]) hide(CollectionPrototype$1, TO_STRING_TAG$3, COLLECTION_NAME$1);
+	    if (!CollectionPrototype$1[TO_STRING_TAG$3]) {
+	      createNonEnumerableProperty(CollectionPrototype$1, TO_STRING_TAG$3, COLLECTION_NAME$1);
+	    }
 	    if (domIterables[COLLECTION_NAME$1]) for (var METHOD_NAME in es_array_iterator) {
 	      // some Chrome versions have non-configurable methods on DOMTokenList
 	      if (CollectionPrototype$1[METHOD_NAME] !== es_array_iterator[METHOD_NAME]) try {
-	        hide(CollectionPrototype$1, METHOD_NAME, es_array_iterator[METHOD_NAME]);
+	        createNonEnumerableProperty(CollectionPrototype$1, METHOD_NAME, es_array_iterator[METHOD_NAME]);
 	      } catch (error) {
 	        CollectionPrototype$1[METHOD_NAME] = es_array_iterator[METHOD_NAME];
 	      }
@@ -2067,118 +2090,10 @@
 	  }
 	}
 
-	function _classCallCheck(instance, Constructor) {
-	  if (!(instance instanceof Constructor)) {
-	    throw new TypeError("Cannot call a class as a function");
-	  }
-	}
-
-	function _defineProperties(target, props) {
-	  for (var i = 0; i < props.length; i++) {
-	    var descriptor = props[i];
-	    descriptor.enumerable = descriptor.enumerable || false;
-	    descriptor.configurable = true;
-	    if ("value" in descriptor) descriptor.writable = true;
-	    Object.defineProperty(target, descriptor.key, descriptor);
-	  }
-	}
-
-	function _createClass(Constructor, protoProps, staticProps) {
-	  if (protoProps) _defineProperties(Constructor.prototype, protoProps);
-	  if (staticProps) _defineProperties(Constructor, staticProps);
-	  return Constructor;
-	}
-
-	function _defineProperty(obj, key, value) {
-	  if (key in obj) {
-	    Object.defineProperty(obj, key, {
-	      value: value,
-	      enumerable: true,
-	      configurable: true,
-	      writable: true
-	    });
-	  } else {
-	    obj[key] = value;
-	  }
-
-	  return obj;
-	}
-
-	function _inherits(subClass, superClass) {
-	  if (typeof superClass !== "function" && superClass !== null) {
-	    throw new TypeError("Super expression must either be null or a function");
-	  }
-
-	  subClass.prototype = Object.create(superClass && superClass.prototype, {
-	    constructor: {
-	      value: subClass,
-	      writable: true,
-	      configurable: true
-	    }
-	  });
-	  if (superClass) _setPrototypeOf(subClass, superClass);
-	}
-
-	function _getPrototypeOf(o) {
-	  _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) {
-	    return o.__proto__ || Object.getPrototypeOf(o);
-	  };
-	  return _getPrototypeOf(o);
-	}
-
-	function _setPrototypeOf(o, p) {
-	  _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) {
-	    o.__proto__ = p;
-	    return o;
-	  };
-
-	  return _setPrototypeOf(o, p);
-	}
-
-	function _assertThisInitialized(self) {
-	  if (self === void 0) {
-	    throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
-	  }
-
-	  return self;
-	}
-
-	function _possibleConstructorReturn(self, call) {
-	  if (call && (typeof call === "object" || typeof call === "function")) {
-	    return call;
-	  }
-
-	  return _assertThisInitialized(self);
-	}
-
-	function _superPropBase(object, property) {
-	  while (!Object.prototype.hasOwnProperty.call(object, property)) {
-	    object = _getPrototypeOf(object);
-	    if (object === null) break;
-	  }
-
-	  return object;
-	}
-
-	function _get(target, property, receiver) {
-	  if (typeof Reflect !== "undefined" && Reflect.get) {
-	    _get = Reflect.get;
-	  } else {
-	    _get = function _get(target, property, receiver) {
-	      var base = _superPropBase(target, property);
-
-	      if (!base) return;
-	      var desc = Object.getOwnPropertyDescriptor(base, property);
-
-	      if (desc.get) {
-	        return desc.get.call(receiver);
-	      }
-
-	      return desc.value;
-	    };
-	  }
-
-	  return _get(target, property, receiver || target);
+	function _inheritsLoose(subClass, superClass) {
+	  subClass.prototype = Object.create(superClass.prototype);
+	  subClass.prototype.constructor = subClass;
+	  subClass.__proto__ = superClass;
 	}
 
 	/**
@@ -2220,7 +2135,7 @@
 	  forceExport: false
 	});
 	$.extend($.fn.bootstrapTable.defaults.icons, {
-	  export: {
+	  "export": {
 	    bootstrap3: 'glyphicon-export icon-share',
 	    materialize: 'file_download'
 	  }[$.fn.bootstrapTable.theme] || 'fa-download'
@@ -2244,255 +2159,242 @@
 	$.BootstrapTable =
 	/*#__PURE__*/
 	function (_$$BootstrapTable) {
-	  _inherits(_class, _$$BootstrapTable);
+	  _inheritsLoose(_class, _$$BootstrapTable);
 
 	  function _class() {
-	    _classCallCheck(this, _class);
-
-	    return _possibleConstructorReturn(this, _getPrototypeOf(_class).apply(this, arguments));
+	    return _$$BootstrapTable.apply(this, arguments) || this;
 	  }
 
-	  _createClass(_class, [{
-	    key: "initToolbar",
-	    value: function initToolbar() {
-	      var _get2,
-	          _this = this;
+	  var _proto = _class.prototype;
 
-	      var o = this.options;
-	      this.showToolbar = this.showToolbar || o.showExport;
+	  _proto.initToolbar = function initToolbar() {
+	    var _$$BootstrapTable$pro,
+	        _this = this;
 
-	      for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
-	        args[_key] = arguments[_key];
-	      }
+	    var o = this.options;
+	    this.showToolbar = this.showToolbar || o.showExport;
 
-	      (_get2 = _get(_getPrototypeOf(_class.prototype), "initToolbar", this)).call.apply(_get2, [this].concat(args));
+	    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+	      args[_key] = arguments[_key];
+	    }
 
-	      if (!this.options.showExport) {
-	        return;
-	      }
+	    (_$$BootstrapTable$pro = _$$BootstrapTable.prototype.initToolbar).call.apply(_$$BootstrapTable$pro, [this].concat(args));
 
-	      var $btnGroup = this.$toolbar.find('>.columns');
-	      this.$export = $btnGroup.find('div.export');
+	    if (!this.options.showExport) {
+	      return;
+	    }
 
-	      if (this.$export.length) {
-	        this.updateExportButton();
-	        return;
-	      }
+	    var $btnGroup = this.$toolbar.find('>.columns');
+	    this.$export = $btnGroup.find('div.export');
 
-	      var $menu = $(this.constants.html.toolbarDropdown.join(''));
-	      var exportTypes = o.exportTypes;
-
-	      if (typeof exportTypes === 'string') {
-	        var types = exportTypes.slice(1, -1).replace(/ /g, '').split(',');
-	        exportTypes = types.map(function (t) {
-	          return t.slice(1, -1);
-	        });
-	      }
-
-	      this.$export = $(exportTypes.length === 1 ? "\n      <div class=\"export ".concat(this.constants.classes.buttonsDropdown, "\"\n      data-type=\"").concat(exportTypes[0], "\">\n      <button class=\"").concat(this.constants.buttonsClass, "\"\n      aria-label=\"Export\"\n      type=\"button\"\n      title=\"").concat(o.formatExport(), "\">\n      ").concat(o.showButtonIcons ? Utils.sprintf(this.constants.html.icon, o.iconsPrefix, o.icons.export) : '', "\n      ").concat(o.showButtonText ? o.formatExport() : '', "\n      </button>\n      </div>\n    ") : "\n      <div class=\"export ".concat(this.constants.classes.buttonsDropdown, "\">\n      <button class=\"").concat(this.constants.buttonsClass, " dropdown-toggle\"\n      aria-label=\"Export\"\n      data-toggle=\"dropdown\"\n      type=\"button\"\n      title=\"").concat(o.formatExport(), "\">\n      ").concat(o.showButtonIcons ? Utils.sprintf(this.constants.html.icon, o.iconsPrefix, o.icons.export) : '', "\n      ").concat(o.showButtonText ? o.formatExport() : '', "\n      ").concat(this.constants.html.dropdownCaret, "\n      </button>\n      </div>\n    ")).appendTo($btnGroup);
-	      var $items = this.$export;
-
-	      if (exportTypes.length > 1) {
-	        this.$export.append($menu); // themes support
-
-	        if ($menu.children().length) {
-	          $menu = $menu.children().eq(0);
-	        }
-
-	        var _iteratorNormalCompletion = true;
-	        var _didIteratorError = false;
-	        var _iteratorError = undefined;
-
-	        try {
-	          for (var _iterator = exportTypes[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-	            var type = _step.value;
-
-	            if (TYPE_NAME.hasOwnProperty(type)) {
-	              var $item = $(Utils.sprintf(this.constants.html.pageDropdownItem, '', TYPE_NAME[type]));
-	              $item.attr('data-type', type);
-	              $menu.append($item);
-	            }
-	          }
-	        } catch (err) {
-	          _didIteratorError = true;
-	          _iteratorError = err;
-	        } finally {
-	          try {
-	            if (!_iteratorNormalCompletion && _iterator.return != null) {
-	              _iterator.return();
-	            }
-	          } finally {
-	            if (_didIteratorError) {
-	              throw _iteratorError;
-	            }
-	          }
-	        }
-
-	        $items = $menu.children();
-	      }
-
+	    if (this.$export.length) {
 	      this.updateExportButton();
-	      $items.click(function (e) {
-	        e.preventDefault();
-	        var type = $(e.currentTarget).data('type');
-	        var exportOptions = {
-	          type: type,
-	          escape: false
-	        };
+	      return;
+	    }
 
-	        _this.exportTable(exportOptions);
+	    var $menu = $(this.constants.html.toolbarDropdown.join(''));
+	    var exportTypes = o.exportTypes;
+
+	    if (typeof exportTypes === 'string') {
+	      var types = exportTypes.slice(1, -1).replace(/ /g, '').split(',');
+	      exportTypes = types.map(function (t) {
+	        return t.slice(1, -1);
 	      });
-	      this.handleToolbar();
 	    }
-	  }, {
-	    key: "handleToolbar",
-	    value: function handleToolbar() {
-	      if (!this.$export) {
-	        return;
+
+	    this.$export = $(exportTypes.length === 1 ? "\n      <div class=\"export " + this.constants.classes.buttonsDropdown + "\"\n      data-type=\"" + exportTypes[0] + "\">\n      <button class=\"" + this.constants.buttonsClass + "\"\n      aria-label=\"Export\"\n      type=\"button\"\n      title=\"" + o.formatExport() + "\">\n      " + (o.showButtonIcons ? Utils.sprintf(this.constants.html.icon, o.iconsPrefix, o.icons["export"]) : '') + "\n      " + (o.showButtonText ? o.formatExport() : '') + "\n      </button>\n      </div>\n    " : "\n      <div class=\"export " + this.constants.classes.buttonsDropdown + "\">\n      <button class=\"" + this.constants.buttonsClass + " dropdown-toggle\"\n      aria-label=\"Export\"\n      data-toggle=\"dropdown\"\n      type=\"button\"\n      title=\"" + o.formatExport() + "\">\n      " + (o.showButtonIcons ? Utils.sprintf(this.constants.html.icon, o.iconsPrefix, o.icons["export"]) : '') + "\n      " + (o.showButtonText ? o.formatExport() : '') + "\n      " + this.constants.html.dropdownCaret + "\n      </button>\n      </div>\n    ").appendTo($btnGroup);
+	    var $items = this.$export;
+
+	    if (exportTypes.length > 1) {
+	      this.$export.append($menu); // themes support
+
+	      if ($menu.children().length) {
+	        $menu = $menu.children().eq(0);
 	      }
 
-	      if ($.fn.bootstrapTable.theme === 'foundation') {
-	        this.$export.find('.dropdown-pane').attr('id', 'toolbar-export-id');
-	      } else if ($.fn.bootstrapTable.theme === 'materialize') {
-	        this.$export.find('.dropdown-content').attr('id', 'toolbar-export-id');
+	      for (var _iterator = exportTypes, _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _iterator[Symbol.iterator]();;) {
+	        var _ref;
+
+	        if (_isArray) {
+	          if (_i >= _iterator.length) break;
+	          _ref = _iterator[_i++];
+	        } else {
+	          _i = _iterator.next();
+	          if (_i.done) break;
+	          _ref = _i.value;
+	        }
+
+	        var type = _ref;
+
+	        if (TYPE_NAME.hasOwnProperty(type)) {
+	          var $item = $(Utils.sprintf(this.constants.html.pageDropdownItem, '', TYPE_NAME[type]));
+	          $item.attr('data-type', type);
+	          $menu.append($item);
+	        }
 	      }
 
-	      if (_get(_getPrototypeOf(_class.prototype), "handleToolbar", this)) {
-	        _get(_getPrototypeOf(_class.prototype), "handleToolbar", this).call(this);
-	      }
+	      $items = $menu.children();
 	    }
-	  }, {
-	    key: "exportTable",
-	    value: function exportTable(options) {
-	      var _this2 = this;
 
-	      var o = this.options;
-	      var stateField = this.header.stateField;
-	      var isCardView = o.cardView;
-
-	      var doExport = function doExport(callback) {
-	        if (stateField) {
-	          _this2.hideColumn(stateField);
-	        }
-
-	        if (isCardView) {
-	          _this2.toggleView();
-	        }
-
-	        var data = _this2.getData();
-
-	        if (o.exportFooter) {
-	          var $footerRow = _this2.$tableFooter.find('tr').first();
-
-	          var footerData = {};
-	          var footerHtml = [];
-	          $.each($footerRow.children(), function (index, footerCell) {
-	            var footerCellHtml = $(footerCell).children('.th-inner').first().html();
-	            footerData[_this2.columns[index].field] = footerCellHtml === '&nbsp;' ? null : footerCellHtml; // grab footer cell text into cell index-based array
-
-	            footerHtml.push(footerCellHtml);
-	          });
-
-	          _this2.$body.append(_this2.$body.children().last()[0].outerHTML);
-
-	          var $lastTableRow = _this2.$body.children().last();
-
-	          $.each($lastTableRow.children(), function (index, lastTableRowCell) {
-	            $(lastTableRowCell).html(footerHtml[index]);
-	          });
-	        }
-
-	        var hiddenColumns = _this2.getHiddenColumns();
-
-	        hiddenColumns.forEach(function (row) {
-	          if (row.forceExport) {
-	            _this2.showColumn(row.field);
-	          }
-	        });
-
-	        if (typeof o.exportOptions.fileName === 'function') {
-	          options.fileName = o.exportOptions.fileName();
-	        }
-
-	        _this2.$el.tableExport($.extend({
-	          onAfterSaveToFile: function onAfterSaveToFile() {
-	            if (o.exportFooter) {
-	              _this2.load(data);
-	            }
-
-	            if (stateField) {
-	              _this2.showColumn(stateField);
-	            }
-
-	            if (isCardView) {
-	              _this2.toggleView();
-	            }
-
-	            hiddenColumns.forEach(function (row) {
-	              if (row.forceExport) {
-	                _this2.hideColumn(row.field);
-	              }
-	            });
-	            if (callback) callback();
-	          }
-	        }, o.exportOptions, options));
+	    this.updateExportButton();
+	    $items.click(function (e) {
+	      e.preventDefault();
+	      var type = $(e.currentTarget).data('type');
+	      var exportOptions = {
+	        type: type,
+	        escape: false
 	      };
 
-	      if (o.exportDataType === 'all' && o.pagination) {
-	        var eventName = o.sidePagination === 'server' ? 'post-body.bs.table' : 'page-change.bs.table';
-	        var virtualScroll = this.options.virtualScroll;
-	        this.$el.one(eventName, function () {
-	          doExport(function () {
-	            _this2.options.virtualScroll = virtualScroll;
+	      _this.exportTable(exportOptions);
+	    });
+	    this.handleToolbar();
+	  };
 
-	            _this2.togglePagination();
+	  _proto.handleToolbar = function handleToolbar() {
+	    if (!this.$export) {
+	      return;
+	    }
+
+	    if ($.fn.bootstrapTable.theme === 'foundation') {
+	      this.$export.find('.dropdown-pane').attr('id', 'toolbar-export-id');
+	    } else if ($.fn.bootstrapTable.theme === 'materialize') {
+	      this.$export.find('.dropdown-content').attr('id', 'toolbar-export-id');
+	    }
+
+	    if (_$$BootstrapTable.prototype.handleToolbar) {
+	      _$$BootstrapTable.prototype.handleToolbar.call(this);
+	    }
+	  };
+
+	  _proto.exportTable = function exportTable(options) {
+	    var _this2 = this;
+
+	    var o = this.options;
+	    var stateField = this.header.stateField;
+	    var isCardView = o.cardView;
+
+	    var doExport = function doExport(callback) {
+	      if (stateField) {
+	        _this2.hideColumn(stateField);
+	      }
+
+	      if (isCardView) {
+	        _this2.toggleView();
+	      }
+
+	      var data = _this2.getData();
+
+	      if (o.exportFooter) {
+	        var $footerRow = _this2.$tableFooter.find('tr').first();
+
+	        var footerData = {};
+	        var footerHtml = [];
+	        $.each($footerRow.children(), function (index, footerCell) {
+	          var footerCellHtml = $(footerCell).children('.th-inner').first().html();
+	          footerData[_this2.columns[index].field] = footerCellHtml === '&nbsp;' ? null : footerCellHtml; // grab footer cell text into cell index-based array
+
+	          footerHtml.push(footerCellHtml);
+	        });
+
+	        _this2.$body.append(_this2.$body.children().last()[0].outerHTML);
+
+	        var $lastTableRow = _this2.$body.children().last();
+
+	        $.each($lastTableRow.children(), function (index, lastTableRowCell) {
+	          $(lastTableRowCell).html(footerHtml[index]);
+	        });
+	      }
+
+	      var hiddenColumns = _this2.getHiddenColumns();
+
+	      hiddenColumns.forEach(function (row) {
+	        if (row.forceExport) {
+	          _this2.showColumn(row.field);
+	        }
+	      });
+
+	      if (typeof o.exportOptions.fileName === 'function') {
+	        options.fileName = o.exportOptions.fileName();
+	      }
+
+	      _this2.$el.tableExport($.extend({
+	        onAfterSaveToFile: function onAfterSaveToFile() {
+	          if (o.exportFooter) {
+	            _this2.load(data);
+	          }
+
+	          if (stateField) {
+	            _this2.showColumn(stateField);
+	          }
+
+	          if (isCardView) {
+	            _this2.toggleView();
+	          }
+
+	          hiddenColumns.forEach(function (row) {
+	            if (row.forceExport) {
+	              _this2.hideColumn(row.field);
+	            }
 	          });
-	        });
-	        this.options.virtualScroll = false;
-	        this.togglePagination();
-	        this.trigger('export-saved', this.getData());
-	      } else if (o.exportDataType === 'selected') {
-	        var data = this.getData();
-	        var selectedData = this.getSelections();
-
-	        if (!selectedData.length) {
-	          return;
+	          if (callback) callback();
 	        }
+	      }, o.exportOptions, options));
+	    };
 
-	        if (o.sidePagination === 'server') {
-	          data = _defineProperty({
-	            total: o.totalRows
-	          }, this.options.dataField, data);
-	          selectedData = _defineProperty({
-	            total: selectedData.length
-	          }, this.options.dataField, selectedData);
-	        }
-
-	        this.load(selectedData);
+	    if (o.exportDataType === 'all' && o.pagination) {
+	      var eventName = o.sidePagination === 'server' ? 'post-body.bs.table' : 'page-change.bs.table';
+	      var virtualScroll = this.options.virtualScroll;
+	      this.$el.one(eventName, function () {
 	        doExport(function () {
-	          _this2.load(data);
-	        });
-	        this.trigger('export-saved', selectedData);
-	      } else {
-	        doExport();
-	        this.trigger('export-saved', this.getData(true));
-	      }
-	    }
-	  }, {
-	    key: "updateSelected",
-	    value: function updateSelected() {
-	      _get(_getPrototypeOf(_class.prototype), "updateSelected", this).call(this);
+	          _this2.options.virtualScroll = virtualScroll;
 
-	      this.updateExportButton();
-	    }
-	  }, {
-	    key: "updateExportButton",
-	    value: function updateExportButton() {
-	      if (this.options.exportDataType === 'selected') {
-	        this.$export.find('> button').prop('disabled', !this.getSelections().length);
+	          _this2.togglePagination();
+	        });
+	      });
+	      this.options.virtualScroll = false;
+	      this.togglePagination();
+	      this.trigger('export-saved', this.getData());
+	    } else if (o.exportDataType === 'selected') {
+	      var data = this.getData();
+	      var selectedData = this.getSelections();
+
+	      if (!selectedData.length) {
+	        return;
 	      }
+
+	      if (o.sidePagination === 'server') {
+	        var _data, _selectedData;
+
+	        data = (_data = {
+	          total: o.totalRows
+	        }, _data[this.options.dataField] = data, _data);
+	        selectedData = (_selectedData = {
+	          total: selectedData.length
+	        }, _selectedData[this.options.dataField] = selectedData, _selectedData);
+	      }
+
+	      this.load(selectedData);
+	      doExport(function () {
+	        _this2.load(data);
+	      });
+	      this.trigger('export-saved', selectedData);
+	    } else {
+	      doExport();
+	      this.trigger('export-saved', this.getData(true));
 	    }
-	  }]);
+	  };
+
+	  _proto.updateSelected = function updateSelected() {
+	    _$$BootstrapTable.prototype.updateSelected.call(this);
+
+	    this.updateExportButton();
+	  };
+
+	  _proto.updateExportButton = function updateExportButton() {
+	    if (this.options.exportDataType === 'selected') {
+	      this.$export.find('> button').prop('disabled', !this.getSelections().length);
+	    }
+	  };
 
 	  return _class;
 	}($.BootstrapTable);

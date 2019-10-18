@@ -12,7 +12,6 @@
 		return module = { exports: {} }, fn(module, module.exports), module.exports;
 	}
 
-	var O = 'object';
 	var check = function (it) {
 	  return it && it.Math == Math && it;
 	};
@@ -20,10 +19,10 @@
 	// https://github.com/zloirock/core-js/issues/86#issuecomment-115759028
 	var global_1 =
 	  // eslint-disable-next-line no-undef
-	  check(typeof globalThis == O && globalThis) ||
-	  check(typeof window == O && window) ||
-	  check(typeof self == O && self) ||
-	  check(typeof commonjsGlobal == O && commonjsGlobal) ||
+	  check(typeof globalThis == 'object' && globalThis) ||
+	  check(typeof window == 'object' && window) ||
+	  check(typeof self == 'object' && self) ||
+	  check(typeof commonjsGlobal == 'object' && commonjsGlobal) ||
 	  // eslint-disable-next-line no-new-func
 	  Function('return this')();
 
@@ -179,7 +178,7 @@
 		f: f$2
 	};
 
-	var hide = descriptors ? function (object, key, value) {
+	var createNonEnumerableProperty = descriptors ? function (object, key, value) {
 	  return objectDefineProperty.f(object, key, createPropertyDescriptor(1, value));
 	} : function (object, key, value) {
 	  object[key] = value;
@@ -188,20 +187,22 @@
 
 	var setGlobal = function (key, value) {
 	  try {
-	    hide(global_1, key, value);
+	    createNonEnumerableProperty(global_1, key, value);
 	  } catch (error) {
 	    global_1[key] = value;
 	  } return value;
 	};
 
-	var shared = createCommonjsModule(function (module) {
 	var SHARED = '__core-js_shared__';
 	var store = global_1[SHARED] || setGlobal(SHARED, {});
 
+	var sharedStore = store;
+
+	var shared = createCommonjsModule(function (module) {
 	(module.exports = function (key, value) {
-	  return store[key] || (store[key] = value !== undefined ? value : {});
+	  return sharedStore[key] || (sharedStore[key] = value !== undefined ? value : {});
 	})('versions', []).push({
-	  version: '3.1.3',
+	  version: '3.3.2',
 	  mode:  'global',
 	  copyright: '© 2019 Denis Pushkarev (zloirock.ru)'
 	});
@@ -245,25 +246,25 @@
 	};
 
 	if (nativeWeakMap) {
-	  var store = new WeakMap$1();
-	  var wmget = store.get;
-	  var wmhas = store.has;
-	  var wmset = store.set;
+	  var store$1 = new WeakMap$1();
+	  var wmget = store$1.get;
+	  var wmhas = store$1.has;
+	  var wmset = store$1.set;
 	  set = function (it, metadata) {
-	    wmset.call(store, it, metadata);
+	    wmset.call(store$1, it, metadata);
 	    return metadata;
 	  };
 	  get = function (it) {
-	    return wmget.call(store, it) || {};
+	    return wmget.call(store$1, it) || {};
 	  };
 	  has$1 = function (it) {
-	    return wmhas.call(store, it);
+	    return wmhas.call(store$1, it);
 	  };
 	} else {
 	  var STATE = sharedKey('state');
 	  hiddenKeys[STATE] = true;
 	  set = function (it, metadata) {
-	    hide(it, STATE, metadata);
+	    createNonEnumerableProperty(it, STATE, metadata);
 	    return metadata;
 	  };
 	  get = function (it) {
@@ -296,7 +297,7 @@
 	  var simple = options ? !!options.enumerable : false;
 	  var noTargetGet = options ? !!options.noTargetGet : false;
 	  if (typeof value == 'function') {
-	    if (typeof key == 'string' && !has(value, 'name')) hide(value, 'name', key);
+	    if (typeof key == 'string' && !has(value, 'name')) createNonEnumerableProperty(value, 'name', key);
 	    enforceInternalState(value).source = TEMPLATE.join(typeof key == 'string' ? key : '');
 	  }
 	  if (O === global_1) {
@@ -309,7 +310,7 @@
 	    simple = true;
 	  }
 	  if (simple) O[key] = value;
-	  else hide(O, key, value);
+	  else createNonEnumerableProperty(O, key, value);
 	// add fake Function#toString for correct work wrapped methods / constructors with methods like LoDash isNative
 	})(Function.prototype, 'toString', function toString() {
 	  return typeof this == 'function' && getInternalState(this).source || functionToString.call(this);
@@ -513,7 +514,7 @@
 	    }
 	    // add a flag to not completely full polyfills
 	    if (options.sham || (targetProperty && targetProperty.sham)) {
-	      hide(sourceProperty, 'sham', true);
+	      createNonEnumerableProperty(sourceProperty, 'sham', true);
 	    }
 	    // extend global
 	    redefine(target, key, sourceProperty, options);
@@ -545,10 +546,10 @@
 	});
 
 	var Symbol$1 = global_1.Symbol;
-	var store$1 = shared('wks');
+	var store$2 = shared('wks');
 
 	var wellKnownSymbol = function (name) {
-	  return store$1[name] || (store$1[name] = nativeSymbol && Symbol$1[name]
+	  return store$2[name] || (store$2[name] = nativeSymbol && Symbol$1[name]
 	    || (nativeSymbol ? Symbol$1 : uid)('Symbol.' + name));
 	};
 
@@ -810,26 +811,6 @@
 	// https://tc39.github.io/ecma262/#sec-get-regexp-@@species
 	setSpecies('RegExp');
 
-	var TO_STRING = 'toString';
-	var RegExpPrototype$1 = RegExp.prototype;
-	var nativeToString = RegExpPrototype$1[TO_STRING];
-
-	var NOT_GENERIC = fails(function () { return nativeToString.call({ source: 'a', flags: 'b' }) != '/a/b'; });
-	// FF44- RegExp#toString has a wrong name
-	var INCORRECT_NAME = nativeToString.name != TO_STRING;
-
-	// `RegExp.prototype.toString` method
-	// https://tc39.github.io/ecma262/#sec-regexp.prototype.tostring
-	if (NOT_GENERIC || INCORRECT_NAME) {
-	  redefine(RegExp.prototype, TO_STRING, function toString() {
-	    var R = anObject(this);
-	    var p = String(R.source);
-	    var rf = R.flags;
-	    var f = String(rf === undefined && R instanceof RegExp && !('flags' in RegExpPrototype$1) ? regexpFlags.call(R) : rf);
-	    return '/' + p + '/' + f;
-	  }, { unsafe: true });
-	}
-
 	var nativeExec = RegExp.prototype.exec;
 	// This always refers to the native implementation, because the
 	// String#replace polyfill uses ./fix-regexp-well-known-symbol-logic.js,
@@ -881,6 +862,30 @@
 	}
 
 	var regexpExec = patchedExec;
+
+	_export({ target: 'RegExp', proto: true, forced: /./.exec !== regexpExec }, {
+	  exec: regexpExec
+	});
+
+	var TO_STRING = 'toString';
+	var RegExpPrototype$1 = RegExp.prototype;
+	var nativeToString = RegExpPrototype$1[TO_STRING];
+
+	var NOT_GENERIC = fails(function () { return nativeToString.call({ source: 'a', flags: 'b' }) != '/a/b'; });
+	// FF44- RegExp#toString has a wrong name
+	var INCORRECT_NAME = nativeToString.name != TO_STRING;
+
+	// `RegExp.prototype.toString` method
+	// https://tc39.github.io/ecma262/#sec-regexp.prototype.tostring
+	if (NOT_GENERIC || INCORRECT_NAME) {
+	  redefine(RegExp.prototype, TO_STRING, function toString() {
+	    var R = anObject(this);
+	    var p = String(R.source);
+	    var rf = R.flags;
+	    var f = String(rf === undefined && R instanceof RegExp && !('flags' in RegExpPrototype$1) ? regexpFlags.call(R) : rf);
+	    return '/' + p + '/' + f;
+	  }, { unsafe: true });
+	}
 
 	var SPECIES$3 = wellKnownSymbol('species');
 
@@ -965,7 +970,7 @@
 	      // 21.2.5.9 RegExp.prototype[@@search](string)
 	      : function (string) { return regexMethod.call(string, this); }
 	    );
-	    if (sham) hide(RegExp.prototype[SYMBOL], 'sham', true);
+	    if (sham) createNonEnumerableProperty(RegExp.prototype[SYMBOL], 'sham', true);
 	  }
 	};
 
@@ -1210,141 +1215,10 @@
 	  ];
 	});
 
-	function _classCallCheck(instance, Constructor) {
-	  if (!(instance instanceof Constructor)) {
-	    throw new TypeError("Cannot call a class as a function");
-	  }
-	}
-
-	function _defineProperties(target, props) {
-	  for (var i = 0; i < props.length; i++) {
-	    var descriptor = props[i];
-	    descriptor.enumerable = descriptor.enumerable || false;
-	    descriptor.configurable = true;
-	    if ("value" in descriptor) descriptor.writable = true;
-	    Object.defineProperty(target, descriptor.key, descriptor);
-	  }
-	}
-
-	function _createClass(Constructor, protoProps, staticProps) {
-	  if (protoProps) _defineProperties(Constructor.prototype, protoProps);
-	  if (staticProps) _defineProperties(Constructor, staticProps);
-	  return Constructor;
-	}
-
-	function _inherits(subClass, superClass) {
-	  if (typeof superClass !== "function" && superClass !== null) {
-	    throw new TypeError("Super expression must either be null or a function");
-	  }
-
-	  subClass.prototype = Object.create(superClass && superClass.prototype, {
-	    constructor: {
-	      value: subClass,
-	      writable: true,
-	      configurable: true
-	    }
-	  });
-	  if (superClass) _setPrototypeOf(subClass, superClass);
-	}
-
-	function _getPrototypeOf(o) {
-	  _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) {
-	    return o.__proto__ || Object.getPrototypeOf(o);
-	  };
-	  return _getPrototypeOf(o);
-	}
-
-	function _setPrototypeOf(o, p) {
-	  _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) {
-	    o.__proto__ = p;
-	    return o;
-	  };
-
-	  return _setPrototypeOf(o, p);
-	}
-
-	function _assertThisInitialized(self) {
-	  if (self === void 0) {
-	    throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
-	  }
-
-	  return self;
-	}
-
-	function _possibleConstructorReturn(self, call) {
-	  if (call && (typeof call === "object" || typeof call === "function")) {
-	    return call;
-	  }
-
-	  return _assertThisInitialized(self);
-	}
-
-	function _superPropBase(object, property) {
-	  while (!Object.prototype.hasOwnProperty.call(object, property)) {
-	    object = _getPrototypeOf(object);
-	    if (object === null) break;
-	  }
-
-	  return object;
-	}
-
-	function _get(target, property, receiver) {
-	  if (typeof Reflect !== "undefined" && Reflect.get) {
-	    _get = Reflect.get;
-	  } else {
-	    _get = function _get(target, property, receiver) {
-	      var base = _superPropBase(target, property);
-
-	      if (!base) return;
-	      var desc = Object.getOwnPropertyDescriptor(base, property);
-
-	      if (desc.get) {
-	        return desc.get.call(receiver);
-	      }
-
-	      return desc.value;
-	    };
-	  }
-
-	  return _get(target, property, receiver || target);
-	}
-
-	function _slicedToArray(arr, i) {
-	  return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest();
-	}
-
-	function _arrayWithHoles(arr) {
-	  if (Array.isArray(arr)) return arr;
-	}
-
-	function _iterableToArrayLimit(arr, i) {
-	  var _arr = [];
-	  var _n = true;
-	  var _d = false;
-	  var _e = undefined;
-
-	  try {
-	    for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) {
-	      _arr.push(_s.value);
-
-	      if (i && _arr.length === i) break;
-	    }
-	  } catch (err) {
-	    _d = true;
-	    _e = err;
-	  } finally {
-	    try {
-	      if (!_n && _i["return"] != null) _i["return"]();
-	    } finally {
-	      if (_d) throw _e;
-	    }
-	  }
-
-	  return _arr;
-	}
-
-	function _nonIterableRest() {
-	  throw new TypeError("Invalid attempt to destructure non-iterable instance");
+	function _inheritsLoose(subClass, superClass) {
+	  subClass.prototype = Object.create(superClass.prototype);
+	  subClass.prototype.constructor = subClass;
+	  subClass.__proto__ = superClass;
 	}
 
 	/**
@@ -1361,8 +1235,10 @@
 	 * url: 默认为当前地址栏
 	 */
 
-	function _GET(key) {
-	  var url = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : window.location.search;
+	function _GET(key, url) {
+	  if (url === void 0) {
+	    url = window.location.search;
+	  }
 
 	  /*
 	   * 注意这里正则表达式的书写方法
@@ -1370,7 +1246,7 @@
 	   * 同理(&|$)表示以&结束或是直接结束的字符串
 	   * ...当然, 我并不知道这种用法.
 	   */
-	  var reg = new RegExp("(^|&)".concat(key, "=([^&]*)(&|$)"));
+	  var reg = new RegExp("(^|&)" + key + "=([^&]*)(&|$)");
 	  var result = url.substr(1).match(reg);
 
 	  if (result) {
@@ -1392,24 +1268,25 @@
 	 */
 
 
-	function _buildUrl(dict) {
-	  var url = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : window.location.search;
+	function _buildUrl(dict, url) {
+	  if (url === void 0) {
+	    url = window.location.search;
+	  }
 
 	  for (var _i = 0, _Object$entries = Object.entries(dict); _i < _Object$entries.length; _i++) {
-	    var _Object$entries$_i = _slicedToArray(_Object$entries[_i], 2),
+	    var _Object$entries$_i = _Object$entries[_i],
 	        key = _Object$entries$_i[0],
 	        val = _Object$entries$_i[1];
-
 	    // 搜索name=general这种形式的字符串(&是分隔符)
-	    var pattern = "".concat(key, "=([^&]*)");
-	    var targetStr = "".concat(key, "=").concat(val);
+	    var pattern = key + "=([^&]*)";
+	    var targetStr = key + "=" + val;
 	    /*
 	     * 如果目标url中包含了key键, 我们需要将它替换成我们自己的val
 	     * 不然就直接添加好了.
 	     */
 
 	    if (url.match(pattern)) {
-	      var tmp = new RegExp("(".concat(key, "=)([^&]*)"), 'gi');
+	      var tmp = new RegExp("(" + key + "=)([^&]*)", 'gi');
 	      url = url.replace(tmp, targetStr);
 	    } else {
 	      var seperator = url.match('[?]') ? '&' : '?';
@@ -1427,57 +1304,54 @@
 	$.BootstrapTable =
 	/*#__PURE__*/
 	function (_$$BootstrapTable) {
-	  _inherits(_class, _$$BootstrapTable);
+	  _inheritsLoose(_class, _$$BootstrapTable);
 
 	  function _class() {
-	    _classCallCheck(this, _class);
-
-	    return _possibleConstructorReturn(this, _getPrototypeOf(_class).apply(this, arguments));
+	    return _$$BootstrapTable.apply(this, arguments) || this;
 	  }
 
-	  _createClass(_class, [{
-	    key: "init",
-	    value: function init() {
-	      var _this = this,
-	          _get2;
+	  var _proto = _class.prototype;
 
-	      if (this.options.pagination && this.options.sidePagination === 'server' && this.options.addrbar) {
-	        // 标志位, 初始加载后关闭
-	        this.addrbarInit = true;
+	  _proto.init = function init() {
+	    var _this = this,
+	        _$$BootstrapTable$pro;
 
-	        var _prefix = this.options.addrPrefix || ''; // 优先级排序: 用户指定值最优先, 未指定时从地址栏获取, 未获取到时采用默认值
+	    if (this.options.pagination && this.options.sidePagination === 'server' && this.options.addrbar) {
+	      // 标志位, 初始加载后关闭
+	      this.addrbarInit = true;
+
+	      var _prefix = this.options.addrPrefix || ''; // 优先级排序: 用户指定值最优先, 未指定时从地址栏获取, 未获取到时采用默认值
 
 
-	        this.options.pageNumber = +_GET("".concat(_prefix, "page")) || $.BootstrapTable.DEFAULTS.pageNumber;
-	        this.options.pageSize = +_GET("".concat(_prefix, "size")) || $.BootstrapTable.DEFAULTS.pageSize;
-	        this.options.sortOrder = _GET("".concat(_prefix, "order")) || $.BootstrapTable.DEFAULTS.sortOrder;
-	        this.options.sortName = _GET("".concat(_prefix, "sort")) || $.BootstrapTable.DEFAULTS.sortName;
-	        this.options.searchText = _GET("".concat(_prefix, "search")) || $.BootstrapTable.DEFAULTS.searchText;
-	        var _onLoadSuccess = this.options.onLoadSuccess;
+	      this.options.pageNumber = +_GET(_prefix + "page") || $.BootstrapTable.DEFAULTS.pageNumber;
+	      this.options.pageSize = +_GET(_prefix + "size") || $.BootstrapTable.DEFAULTS.pageSize;
+	      this.options.sortOrder = _GET(_prefix + "order") || $.BootstrapTable.DEFAULTS.sortOrder;
+	      this.options.sortName = _GET(_prefix + "sort") || $.BootstrapTable.DEFAULTS.sortName;
+	      this.options.searchText = _GET(_prefix + "search") || $.BootstrapTable.DEFAULTS.searchText;
+	      var _onLoadSuccess = this.options.onLoadSuccess;
 
-	        this.options.onLoadSuccess = function (data) {
-	          if (_this.addrbarInit) {
-	            _this.addrbarInit = false;
-	          } else {
-	            var params = {};
-	            params["".concat(_prefix, "page")] = _this.options.pageNumber, params["".concat(_prefix, "size")] = _this.options.pageSize, params["".concat(_prefix, "order")] = _this.options.sortOrder, params["".concat(_prefix, "sort")] = _this.options.sortName, params["".concat(_prefix, "search")] = _this.options.searchText; // h5提供的修改浏览器地址栏的方法
+	      this.options.onLoadSuccess = function (data) {
+	        if (_this.addrbarInit) {
+	          _this.addrbarInit = false;
+	        } else {
+	          var params = {};
+	          params[_prefix + "page"] = _this.options.pageNumber, params[_prefix + "size"] = _this.options.pageSize, params[_prefix + "order"] = _this.options.sortOrder, params[_prefix + "sort"] = _this.options.sortName, params[_prefix + "search"] = _this.options.searchText; // h5提供的修改浏览器地址栏的方法
 
-	            window.history.pushState({}, '', _buildUrl(params));
-	          }
+	          window.history.pushState({}, '', _buildUrl(params));
+	        }
 
-	          if (_onLoadSuccess) {
-	            _onLoadSuccess.call(_this, data);
-	          }
-	        };
-	      }
-
-	      for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
-	        args[_key] = arguments[_key];
-	      }
-
-	      (_get2 = _get(_getPrototypeOf(_class.prototype), "init", this)).call.apply(_get2, [this].concat(args));
+	        if (_onLoadSuccess) {
+	          _onLoadSuccess.call(_this, data);
+	        }
+	      };
 	    }
-	  }]);
+
+	    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+	      args[_key] = arguments[_key];
+	    }
+
+	    (_$$BootstrapTable$pro = _$$BootstrapTable.prototype.init).call.apply(_$$BootstrapTable$pro, [this].concat(args));
+	  };
 
 	  return _class;
 	}($.BootstrapTable);

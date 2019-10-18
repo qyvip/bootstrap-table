@@ -12,7 +12,6 @@
 		return module = { exports: {} }, fn(module, module.exports), module.exports;
 	}
 
-	var O = 'object';
 	var check = function (it) {
 	  return it && it.Math == Math && it;
 	};
@@ -20,10 +19,10 @@
 	// https://github.com/zloirock/core-js/issues/86#issuecomment-115759028
 	var global_1 =
 	  // eslint-disable-next-line no-undef
-	  check(typeof globalThis == O && globalThis) ||
-	  check(typeof window == O && window) ||
-	  check(typeof self == O && self) ||
-	  check(typeof commonjsGlobal == O && commonjsGlobal) ||
+	  check(typeof globalThis == 'object' && globalThis) ||
+	  check(typeof window == 'object' && window) ||
+	  check(typeof self == 'object' && self) ||
+	  check(typeof commonjsGlobal == 'object' && commonjsGlobal) ||
 	  // eslint-disable-next-line no-new-func
 	  Function('return this')();
 
@@ -179,7 +178,7 @@
 		f: f$2
 	};
 
-	var hide = descriptors ? function (object, key, value) {
+	var createNonEnumerableProperty = descriptors ? function (object, key, value) {
 	  return objectDefineProperty.f(object, key, createPropertyDescriptor(1, value));
 	} : function (object, key, value) {
 	  object[key] = value;
@@ -188,20 +187,22 @@
 
 	var setGlobal = function (key, value) {
 	  try {
-	    hide(global_1, key, value);
+	    createNonEnumerableProperty(global_1, key, value);
 	  } catch (error) {
 	    global_1[key] = value;
 	  } return value;
 	};
 
-	var shared = createCommonjsModule(function (module) {
 	var SHARED = '__core-js_shared__';
 	var store = global_1[SHARED] || setGlobal(SHARED, {});
 
+	var sharedStore = store;
+
+	var shared = createCommonjsModule(function (module) {
 	(module.exports = function (key, value) {
-	  return store[key] || (store[key] = value !== undefined ? value : {});
+	  return sharedStore[key] || (sharedStore[key] = value !== undefined ? value : {});
 	})('versions', []).push({
-	  version: '3.1.3',
+	  version: '3.3.2',
 	  mode:  'global',
 	  copyright: '© 2019 Denis Pushkarev (zloirock.ru)'
 	});
@@ -245,25 +246,25 @@
 	};
 
 	if (nativeWeakMap) {
-	  var store = new WeakMap$1();
-	  var wmget = store.get;
-	  var wmhas = store.has;
-	  var wmset = store.set;
+	  var store$1 = new WeakMap$1();
+	  var wmget = store$1.get;
+	  var wmhas = store$1.has;
+	  var wmset = store$1.set;
 	  set = function (it, metadata) {
-	    wmset.call(store, it, metadata);
+	    wmset.call(store$1, it, metadata);
 	    return metadata;
 	  };
 	  get = function (it) {
-	    return wmget.call(store, it) || {};
+	    return wmget.call(store$1, it) || {};
 	  };
 	  has$1 = function (it) {
-	    return wmhas.call(store, it);
+	    return wmhas.call(store$1, it);
 	  };
 	} else {
 	  var STATE = sharedKey('state');
 	  hiddenKeys[STATE] = true;
 	  set = function (it, metadata) {
-	    hide(it, STATE, metadata);
+	    createNonEnumerableProperty(it, STATE, metadata);
 	    return metadata;
 	  };
 	  get = function (it) {
@@ -296,7 +297,7 @@
 	  var simple = options ? !!options.enumerable : false;
 	  var noTargetGet = options ? !!options.noTargetGet : false;
 	  if (typeof value == 'function') {
-	    if (typeof key == 'string' && !has(value, 'name')) hide(value, 'name', key);
+	    if (typeof key == 'string' && !has(value, 'name')) createNonEnumerableProperty(value, 'name', key);
 	    enforceInternalState(value).source = TEMPLATE.join(typeof key == 'string' ? key : '');
 	  }
 	  if (O === global_1) {
@@ -309,7 +310,7 @@
 	    simple = true;
 	  }
 	  if (simple) O[key] = value;
-	  else hide(O, key, value);
+	  else createNonEnumerableProperty(O, key, value);
 	// add fake Function#toString for correct work wrapped methods / constructors with methods like LoDash isNative
 	})(Function.prototype, 'toString', function toString() {
 	  return typeof this == 'function' && getInternalState(this).source || functionToString.call(this);
@@ -513,7 +514,7 @@
 	    }
 	    // add a flag to not completely full polyfills
 	    if (options.sham || (targetProperty && targetProperty.sham)) {
-	      hide(sourceProperty, 'sham', true);
+	      createNonEnumerableProperty(sourceProperty, 'sham', true);
 	    }
 	    // extend global
 	    redefine(target, key, sourceProperty, options);
@@ -568,10 +569,10 @@
 	});
 
 	var Symbol$1 = global_1.Symbol;
-	var store$1 = shared('wks');
+	var store$2 = shared('wks');
 
 	var wellKnownSymbol = function (name) {
-	  return store$1[name] || (store$1[name] = nativeSymbol && Symbol$1[name]
+	  return store$2[name] || (store$2[name] = nativeSymbol && Symbol$1[name]
 	    || (nativeSymbol ? Symbol$1 : uid)('Symbol.' + name));
 	};
 
@@ -721,7 +722,7 @@
 	// Array.prototype[@@unscopables]
 	// https://tc39.github.io/ecma262/#sec-array.prototype-@@unscopables
 	if (ArrayPrototype[UNSCOPABLES] == undefined) {
-	  hide(ArrayPrototype, UNSCOPABLES, objectCreate(null));
+	  createNonEnumerableProperty(ArrayPrototype, UNSCOPABLES, objectCreate(null));
 	}
 
 	// add a key to Array.prototype[@@unscopables]
@@ -749,103 +750,10 @@
 	// https://tc39.github.io/ecma262/#sec-array.prototype-@@unscopables
 	addToUnscopables(FIND);
 
-	function _classCallCheck(instance, Constructor) {
-	  if (!(instance instanceof Constructor)) {
-	    throw new TypeError("Cannot call a class as a function");
-	  }
-	}
-
-	function _defineProperties(target, props) {
-	  for (var i = 0; i < props.length; i++) {
-	    var descriptor = props[i];
-	    descriptor.enumerable = descriptor.enumerable || false;
-	    descriptor.configurable = true;
-	    if ("value" in descriptor) descriptor.writable = true;
-	    Object.defineProperty(target, descriptor.key, descriptor);
-	  }
-	}
-
-	function _createClass(Constructor, protoProps, staticProps) {
-	  if (protoProps) _defineProperties(Constructor.prototype, protoProps);
-	  if (staticProps) _defineProperties(Constructor, staticProps);
-	  return Constructor;
-	}
-
-	function _inherits(subClass, superClass) {
-	  if (typeof superClass !== "function" && superClass !== null) {
-	    throw new TypeError("Super expression must either be null or a function");
-	  }
-
-	  subClass.prototype = Object.create(superClass && superClass.prototype, {
-	    constructor: {
-	      value: subClass,
-	      writable: true,
-	      configurable: true
-	    }
-	  });
-	  if (superClass) _setPrototypeOf(subClass, superClass);
-	}
-
-	function _getPrototypeOf(o) {
-	  _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) {
-	    return o.__proto__ || Object.getPrototypeOf(o);
-	  };
-	  return _getPrototypeOf(o);
-	}
-
-	function _setPrototypeOf(o, p) {
-	  _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) {
-	    o.__proto__ = p;
-	    return o;
-	  };
-
-	  return _setPrototypeOf(o, p);
-	}
-
-	function _assertThisInitialized(self) {
-	  if (self === void 0) {
-	    throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
-	  }
-
-	  return self;
-	}
-
-	function _possibleConstructorReturn(self, call) {
-	  if (call && (typeof call === "object" || typeof call === "function")) {
-	    return call;
-	  }
-
-	  return _assertThisInitialized(self);
-	}
-
-	function _superPropBase(object, property) {
-	  while (!Object.prototype.hasOwnProperty.call(object, property)) {
-	    object = _getPrototypeOf(object);
-	    if (object === null) break;
-	  }
-
-	  return object;
-	}
-
-	function _get(target, property, receiver) {
-	  if (typeof Reflect !== "undefined" && Reflect.get) {
-	    _get = Reflect.get;
-	  } else {
-	    _get = function _get(target, property, receiver) {
-	      var base = _superPropBase(target, property);
-
-	      if (!base) return;
-	      var desc = Object.getOwnPropertyDescriptor(base, property);
-
-	      if (desc.get) {
-	        return desc.get.call(receiver);
-	      }
-
-	      return desc.value;
-	    };
-	  }
-
-	  return _get(target, property, receiver || target);
+	function _inheritsLoose(subClass, superClass) {
+	  subClass.prototype = Object.create(superClass.prototype);
+	  subClass.prototype.constructor = subClass;
+	  subClass.__proto__ = superClass;
 	}
 
 	/**
@@ -864,78 +772,71 @@
 	$.BootstrapTable =
 	/*#__PURE__*/
 	function (_$$BootstrapTable) {
-	  _inherits(_class, _$$BootstrapTable);
+	  _inheritsLoose(_class, _$$BootstrapTable);
 
 	  function _class() {
-	    _classCallCheck(this, _class);
-
-	    return _possibleConstructorReturn(this, _getPrototypeOf(_class).apply(this, arguments));
+	    return _$$BootstrapTable.apply(this, arguments) || this;
 	  }
 
-	  _createClass(_class, [{
-	    key: "initConstants",
-	    value: function initConstants() {
-	      _get(_getPrototypeOf(_class.prototype), "initConstants", this).call(this);
+	  var _proto = _class.prototype;
 
-	      this.constants.classes.buttonsGroup = 'buttons has-addons';
-	      this.constants.classes.buttonsDropdown = 'button dropdown is-right';
-	      this.constants.classes.input = 'input';
-	      this.constants.classes.paginationDropdown = 'ui dropdown';
-	      this.constants.classes.dropup = 'is-up';
-	      this.constants.classes.dropdownActive = 'is-active';
-	      this.constants.classes.paginationActive = 'is-current';
-	      this.constants.classes.buttonActive = 'is-active';
-	      this.constants.html.toolbarDropdown = ['<div class="dropdown-menu"><div class="dropdown-content">', '</div></div>'];
-	      this.constants.html.toolbarDropdownItem = '<label class="dropdown-item">%s</label>';
-	      this.constants.html.toolbarDropdownSeparator = '<li class="dropdown-divider"></li>';
-	      this.constants.html.pageDropdown = ['<div class="dropdown-menu"><div class="dropdown-content">', '</div></div>'];
-	      this.constants.html.pageDropdownItem = '<a class="dropdown-item %s" href="#">%s</a>';
-	      this.constants.html.dropdownCaret = '<span class="icon is-small"><i class="fas fa-angle-down" aria-hidden="true"></i></span>';
-	      this.constants.html.pagination = ['<ul class="pagination%s">', '</ul>'];
-	      this.constants.html.paginationItem = '<li><a class="page-item pagination-link%s" aria-label="%s" href="#">%s</a></li>';
-	      this.constants.html.searchInput = '<p class="control"><input class="%s input-%s" type="text" placeholder="%s"></p>';
-	      this.constants.html.inputGroup = '<div class="field has-addons has-addons-right">%s%s</div>';
-	      this.constants.html.searchButton = '<p class="control"><button class="%s" type="button" name="search" title="%s">%s %s</button></p>';
-	      this.constants.html.searchClearButton = '<p class="control"><button class="%s" type="button" name="clearSearch" title="%s">%s %s</button></p>';
-	    }
-	  }, {
-	    key: "initToolbar",
-	    value: function initToolbar() {
-	      _get(_getPrototypeOf(_class.prototype), "initToolbar", this).call(this);
+	  _proto.initConstants = function initConstants() {
+	    _$$BootstrapTable.prototype.initConstants.call(this);
 
-	      this.handleToolbar();
-	    }
-	  }, {
-	    key: "handleToolbar",
-	    value: function handleToolbar() {
-	      if (this.$toolbar.find('.dropdown').length) {
-	        this._initDropdown();
-	      }
-	    }
-	  }, {
-	    key: "initPagination",
-	    value: function initPagination() {
-	      _get(_getPrototypeOf(_class.prototype), "initPagination", this).call(this);
+	    this.constants.classes.buttonsGroup = 'buttons has-addons';
+	    this.constants.classes.buttonsDropdown = 'button dropdown is-right';
+	    this.constants.classes.input = 'input';
+	    this.constants.classes.paginationDropdown = 'ui dropdown';
+	    this.constants.classes.dropup = 'is-up';
+	    this.constants.classes.dropdownActive = 'is-active';
+	    this.constants.classes.paginationActive = 'is-current';
+	    this.constants.classes.buttonActive = 'is-active';
+	    this.constants.html.toolbarDropdown = ['<div class="dropdown-menu"><div class="dropdown-content">', '</div></div>'];
+	    this.constants.html.toolbarDropdownItem = '<label class="dropdown-item">%s</label>';
+	    this.constants.html.toolbarDropdownSeparator = '<li class="dropdown-divider"></li>';
+	    this.constants.html.pageDropdown = ['<div class="dropdown-menu"><div class="dropdown-content">', '</div></div>'];
+	    this.constants.html.pageDropdownItem = '<a class="dropdown-item %s" href="#">%s</a>';
+	    this.constants.html.dropdownCaret = '<span class="icon is-small"><i class="fas fa-angle-down" aria-hidden="true"></i></span>';
+	    this.constants.html.pagination = ['<ul class="pagination%s">', '</ul>'];
+	    this.constants.html.paginationItem = '<li><a class="page-item pagination-link%s" aria-label="%s" href="#">%s</a></li>';
+	    this.constants.html.searchInput = '<p class="control"><input class="%s input-%s" type="text" placeholder="%s"></p>';
+	    this.constants.html.inputGroup = '<div class="field has-addons has-addons-right">%s%s</div>';
+	    this.constants.html.searchButton = '<p class="control"><button class="%s" type="button" name="search" title="%s">%s %s</button></p>';
+	    this.constants.html.searchClearButton = '<p class="control"><button class="%s" type="button" name="clearSearch" title="%s">%s %s</button></p>';
+	  };
 
-	      if (this.options.pagination && !this.options.onlyInfoPagination) {
-	        this._initDropdown();
-	      }
+	  _proto.initToolbar = function initToolbar() {
+	    _$$BootstrapTable.prototype.initToolbar.call(this);
+
+	    this.handleToolbar();
+	  };
+
+	  _proto.handleToolbar = function handleToolbar() {
+	    if (this.$toolbar.find('.dropdown').length) {
+	      this._initDropdown();
 	    }
-	  }, {
-	    key: "_initDropdown",
-	    value: function _initDropdown() {
-	      var $dropdowns = this.$container.find('.dropdown:not(.is-hoverable)');
-	      $dropdowns.off('click').on('click', function (e) {
-	        var $this = $(e.currentTarget);
-	        e.stopPropagation();
-	        $dropdowns.not($this).removeClass('is-active');
-	        $this.toggleClass('is-active');
-	      });
-	      $(document).off('click.bs.dropdown.bulma').on('click.bs.dropdown.bulma', function () {
-	        $dropdowns.removeClass('is-active');
-	      });
+	  };
+
+	  _proto.initPagination = function initPagination() {
+	    _$$BootstrapTable.prototype.initPagination.call(this);
+
+	    if (this.options.pagination && !this.options.onlyInfoPagination) {
+	      this._initDropdown();
 	    }
-	  }]);
+	  };
+
+	  _proto._initDropdown = function _initDropdown() {
+	    var $dropdowns = this.$container.find('.dropdown:not(.is-hoverable)');
+	    $dropdowns.off('click').on('click', function (e) {
+	      var $this = $(e.currentTarget);
+	      e.stopPropagation();
+	      $dropdowns.not($this).removeClass('is-active');
+	      $this.toggleClass('is-active');
+	    });
+	    $(document).off('click.bs.dropdown.bulma').on('click.bs.dropdown.bulma', function () {
+	      $dropdowns.removeClass('is-active');
+	    });
+	  };
 
 	  return _class;
 	}($.BootstrapTable);

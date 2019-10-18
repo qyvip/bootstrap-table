@@ -6,6 +6,7 @@ import { terser } from 'rollup-plugin-terser'
 import inject from 'rollup-plugin-inject'
 import multiEntry from 'rollup-plugin-multi-entry'
 import vue from 'rollup-plugin-vue'
+// import es3 from 'rollup-plugin-es3'
 
 const files = glob.sync('src/**/*.js', {
   ignore: [
@@ -29,12 +30,50 @@ const plugins = [
   resolve(),
   commonjs(),
   babel({
-    exclude: 'node_modules/**'
+    exclude: 'node_modules/**',
+    presets: [[
+      '@babel/preset-env',
+      {
+        targets: {
+          // ie: '>=8',
+          // edge: '>=17',
+          // firefox: '>=60',
+          // chrome: '>=67',
+          // safari: '>=11.1'
+          browsers: [
+            '>= 1%',
+            'last 1 major version',
+            'not dead',
+            'Chrome >= 45',
+            'Firefox >= 38',
+            'Edge >= 12',
+            'IE >= 8',
+            'iOS >= 9',
+            'Safari >= 9',
+            'Android >= 4.4',
+            'Opera >= 30'
+          ]
+        },
+        corejs: '3',
+        useBuiltIns: 'usage',
+        modules: false,
+        loose: true
+      }
+    ]],
+    runtimeHelpers: true
   })
+  // es3({
+  //   remove: ['defineProperty', 'freeze']
+  // })
 ]
 
 if (process.env.NODE_ENV === 'production') {
+
   plugins.push(terser({
+    ie8: true,
+    mangle: {
+      keep_fnames: true
+    },
     output: {
       comments () {
         return false

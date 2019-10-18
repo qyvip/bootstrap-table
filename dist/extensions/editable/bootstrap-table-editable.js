@@ -12,7 +12,6 @@
 		return module = { exports: {} }, fn(module, module.exports), module.exports;
 	}
 
-	var O = 'object';
 	var check = function (it) {
 	  return it && it.Math == Math && it;
 	};
@@ -20,10 +19,10 @@
 	// https://github.com/zloirock/core-js/issues/86#issuecomment-115759028
 	var global_1 =
 	  // eslint-disable-next-line no-undef
-	  check(typeof globalThis == O && globalThis) ||
-	  check(typeof window == O && window) ||
-	  check(typeof self == O && self) ||
-	  check(typeof commonjsGlobal == O && commonjsGlobal) ||
+	  check(typeof globalThis == 'object' && globalThis) ||
+	  check(typeof window == 'object' && window) ||
+	  check(typeof self == 'object' && self) ||
+	  check(typeof commonjsGlobal == 'object' && commonjsGlobal) ||
 	  // eslint-disable-next-line no-new-func
 	  Function('return this')();
 
@@ -179,7 +178,7 @@
 		f: f$2
 	};
 
-	var hide = descriptors ? function (object, key, value) {
+	var createNonEnumerableProperty = descriptors ? function (object, key, value) {
 	  return objectDefineProperty.f(object, key, createPropertyDescriptor(1, value));
 	} : function (object, key, value) {
 	  object[key] = value;
@@ -188,20 +187,22 @@
 
 	var setGlobal = function (key, value) {
 	  try {
-	    hide(global_1, key, value);
+	    createNonEnumerableProperty(global_1, key, value);
 	  } catch (error) {
 	    global_1[key] = value;
 	  } return value;
 	};
 
-	var shared = createCommonjsModule(function (module) {
 	var SHARED = '__core-js_shared__';
 	var store = global_1[SHARED] || setGlobal(SHARED, {});
 
+	var sharedStore = store;
+
+	var shared = createCommonjsModule(function (module) {
 	(module.exports = function (key, value) {
-	  return store[key] || (store[key] = value !== undefined ? value : {});
+	  return sharedStore[key] || (sharedStore[key] = value !== undefined ? value : {});
 	})('versions', []).push({
-	  version: '3.1.3',
+	  version: '3.3.2',
 	  mode:  'global',
 	  copyright: '© 2019 Denis Pushkarev (zloirock.ru)'
 	});
@@ -245,25 +246,25 @@
 	};
 
 	if (nativeWeakMap) {
-	  var store = new WeakMap$1();
-	  var wmget = store.get;
-	  var wmhas = store.has;
-	  var wmset = store.set;
+	  var store$1 = new WeakMap$1();
+	  var wmget = store$1.get;
+	  var wmhas = store$1.has;
+	  var wmset = store$1.set;
 	  set = function (it, metadata) {
-	    wmset.call(store, it, metadata);
+	    wmset.call(store$1, it, metadata);
 	    return metadata;
 	  };
 	  get = function (it) {
-	    return wmget.call(store, it) || {};
+	    return wmget.call(store$1, it) || {};
 	  };
 	  has$1 = function (it) {
-	    return wmhas.call(store, it);
+	    return wmhas.call(store$1, it);
 	  };
 	} else {
 	  var STATE = sharedKey('state');
 	  hiddenKeys[STATE] = true;
 	  set = function (it, metadata) {
-	    hide(it, STATE, metadata);
+	    createNonEnumerableProperty(it, STATE, metadata);
 	    return metadata;
 	  };
 	  get = function (it) {
@@ -296,7 +297,7 @@
 	  var simple = options ? !!options.enumerable : false;
 	  var noTargetGet = options ? !!options.noTargetGet : false;
 	  if (typeof value == 'function') {
-	    if (typeof key == 'string' && !has(value, 'name')) hide(value, 'name', key);
+	    if (typeof key == 'string' && !has(value, 'name')) createNonEnumerableProperty(value, 'name', key);
 	    enforceInternalState(value).source = TEMPLATE.join(typeof key == 'string' ? key : '');
 	  }
 	  if (O === global_1) {
@@ -309,7 +310,7 @@
 	    simple = true;
 	  }
 	  if (simple) O[key] = value;
-	  else hide(O, key, value);
+	  else createNonEnumerableProperty(O, key, value);
 	// add fake Function#toString for correct work wrapped methods / constructors with methods like LoDash isNative
 	})(Function.prototype, 'toString', function toString() {
 	  return typeof this == 'function' && getInternalState(this).source || functionToString.call(this);
@@ -513,119 +514,12 @@
 	    }
 	    // add a flag to not completely full polyfills
 	    if (options.sham || (targetProperty && targetProperty.sham)) {
-	      hide(sourceProperty, 'sham', true);
+	      createNonEnumerableProperty(sourceProperty, 'sham', true);
 	    }
 	    // extend global
 	    redefine(target, key, sourceProperty, options);
 	  }
 	};
-
-	// `IsArray` abstract operation
-	// https://tc39.github.io/ecma262/#sec-isarray
-	var isArray = Array.isArray || function isArray(arg) {
-	  return classofRaw(arg) == 'Array';
-	};
-
-	// `ToObject` abstract operation
-	// https://tc39.github.io/ecma262/#sec-toobject
-	var toObject = function (argument) {
-	  return Object(requireObjectCoercible(argument));
-	};
-
-	var createProperty = function (object, key, value) {
-	  var propertyKey = toPrimitive(key);
-	  if (propertyKey in object) objectDefineProperty.f(object, propertyKey, createPropertyDescriptor(0, value));
-	  else object[propertyKey] = value;
-	};
-
-	var nativeSymbol = !!Object.getOwnPropertySymbols && !fails(function () {
-	  // Chrome 38 Symbol has incorrect toString conversion
-	  // eslint-disable-next-line no-undef
-	  return !String(Symbol());
-	});
-
-	var Symbol$1 = global_1.Symbol;
-	var store$1 = shared('wks');
-
-	var wellKnownSymbol = function (name) {
-	  return store$1[name] || (store$1[name] = nativeSymbol && Symbol$1[name]
-	    || (nativeSymbol ? Symbol$1 : uid)('Symbol.' + name));
-	};
-
-	var SPECIES = wellKnownSymbol('species');
-
-	// `ArraySpeciesCreate` abstract operation
-	// https://tc39.github.io/ecma262/#sec-arrayspeciescreate
-	var arraySpeciesCreate = function (originalArray, length) {
-	  var C;
-	  if (isArray(originalArray)) {
-	    C = originalArray.constructor;
-	    // cross-realm fallback
-	    if (typeof C == 'function' && (C === Array || isArray(C.prototype))) C = undefined;
-	    else if (isObject(C)) {
-	      C = C[SPECIES];
-	      if (C === null) C = undefined;
-	    }
-	  } return new (C === undefined ? Array : C)(length === 0 ? 0 : length);
-	};
-
-	var SPECIES$1 = wellKnownSymbol('species');
-
-	var arrayMethodHasSpeciesSupport = function (METHOD_NAME) {
-	  return !fails(function () {
-	    var array = [];
-	    var constructor = array.constructor = {};
-	    constructor[SPECIES$1] = function () {
-	      return { foo: 1 };
-	    };
-	    return array[METHOD_NAME](Boolean).foo !== 1;
-	  });
-	};
-
-	var IS_CONCAT_SPREADABLE = wellKnownSymbol('isConcatSpreadable');
-	var MAX_SAFE_INTEGER = 0x1FFFFFFFFFFFFF;
-	var MAXIMUM_ALLOWED_INDEX_EXCEEDED = 'Maximum allowed index exceeded';
-
-	var IS_CONCAT_SPREADABLE_SUPPORT = !fails(function () {
-	  var array = [];
-	  array[IS_CONCAT_SPREADABLE] = false;
-	  return array.concat()[0] !== array;
-	});
-
-	var SPECIES_SUPPORT = arrayMethodHasSpeciesSupport('concat');
-
-	var isConcatSpreadable = function (O) {
-	  if (!isObject(O)) return false;
-	  var spreadable = O[IS_CONCAT_SPREADABLE];
-	  return spreadable !== undefined ? !!spreadable : isArray(O);
-	};
-
-	var FORCED = !IS_CONCAT_SPREADABLE_SUPPORT || !SPECIES_SUPPORT;
-
-	// `Array.prototype.concat` method
-	// https://tc39.github.io/ecma262/#sec-array.prototype.concat
-	// with adding support of @@isConcatSpreadable and @@species
-	_export({ target: 'Array', proto: true, forced: FORCED }, {
-	  concat: function concat(arg) { // eslint-disable-line no-unused-vars
-	    var O = toObject(this);
-	    var A = arraySpeciesCreate(O, 0);
-	    var n = 0;
-	    var i, k, length, len, E;
-	    for (i = -1, length = arguments.length; i < length; i++) {
-	      E = i === -1 ? O : arguments[i];
-	      if (isConcatSpreadable(E)) {
-	        len = toLength(E.length);
-	        if (n + len > MAX_SAFE_INTEGER) throw TypeError(MAXIMUM_ALLOWED_INDEX_EXCEEDED);
-	        for (k = 0; k < len; k++, n++) if (k in E) createProperty(A, n, E[k]);
-	      } else {
-	        if (n >= MAX_SAFE_INTEGER) throw TypeError(MAXIMUM_ALLOWED_INDEX_EXCEEDED);
-	        createProperty(A, n++, E);
-	      }
-	    }
-	    A.length = n;
-	    return A;
-	  }
-	});
 
 	var aFunction$1 = function (it) {
 	  if (typeof it != 'function') {
@@ -654,6 +548,49 @@
 	  return function (/* ...args */) {
 	    return fn.apply(that, arguments);
 	  };
+	};
+
+	// `ToObject` abstract operation
+	// https://tc39.github.io/ecma262/#sec-toobject
+	var toObject = function (argument) {
+	  return Object(requireObjectCoercible(argument));
+	};
+
+	// `IsArray` abstract operation
+	// https://tc39.github.io/ecma262/#sec-isarray
+	var isArray = Array.isArray || function isArray(arg) {
+	  return classofRaw(arg) == 'Array';
+	};
+
+	var nativeSymbol = !!Object.getOwnPropertySymbols && !fails(function () {
+	  // Chrome 38 Symbol has incorrect toString conversion
+	  // eslint-disable-next-line no-undef
+	  return !String(Symbol());
+	});
+
+	var Symbol$1 = global_1.Symbol;
+	var store$2 = shared('wks');
+
+	var wellKnownSymbol = function (name) {
+	  return store$2[name] || (store$2[name] = nativeSymbol && Symbol$1[name]
+	    || (nativeSymbol ? Symbol$1 : uid)('Symbol.' + name));
+	};
+
+	var SPECIES = wellKnownSymbol('species');
+
+	// `ArraySpeciesCreate` abstract operation
+	// https://tc39.github.io/ecma262/#sec-arrayspeciescreate
+	var arraySpeciesCreate = function (originalArray, length) {
+	  var C;
+	  if (isArray(originalArray)) {
+	    C = originalArray.constructor;
+	    // cross-realm fallback
+	    if (typeof C == 'function' && (C === Array || isArray(C.prototype))) C = undefined;
+	    else if (isObject(C)) {
+	      C = C[SPECIES];
+	      if (C === null) C = undefined;
+	    }
+	  } return new (C === undefined ? Array : C)(length === 0 ? 0 : length);
 	};
 
 	var push = [].push;
@@ -785,7 +722,7 @@
 	// Array.prototype[@@unscopables]
 	// https://tc39.github.io/ecma262/#sec-array.prototype-@@unscopables
 	if (ArrayPrototype[UNSCOPABLES] == undefined) {
-	  hide(ArrayPrototype, UNSCOPABLES, objectCreate(null));
+	  createNonEnumerableProperty(ArrayPrototype, UNSCOPABLES, objectCreate(null));
 	}
 
 	// add a key to Array.prototype[@@unscopables]
@@ -919,7 +856,11 @@
 
 	var regexpExec = patchedExec;
 
-	var SPECIES$2 = wellKnownSymbol('species');
+	_export({ target: 'RegExp', proto: true, forced: /./.exec !== regexpExec }, {
+	  exec: regexpExec
+	});
+
+	var SPECIES$1 = wellKnownSymbol('species');
 
 	var REPLACE_SUPPORTS_NAMED_GROUPS = !fails(function () {
 	  // #replace needs built-in support for named groups.
@@ -964,7 +905,7 @@
 	      // RegExp[@@split] doesn't call the regex's exec method, but first creates
 	      // a new one. We need to return the patched regex when creating the new one.
 	      re.constructor = {};
-	      re.constructor[SPECIES$2] = function () { return re; };
+	      re.constructor[SPECIES$1] = function () { return re; };
 	    }
 
 	    re[SYMBOL]('');
@@ -1002,7 +943,7 @@
 	      // 21.2.5.9 RegExp.prototype[@@search](string)
 	      : function (string) { return regexMethod.call(string, this); }
 	    );
-	    if (sham) hide(RegExp.prototype[SYMBOL], 'sham', true);
+	    if (sham) createNonEnumerableProperty(RegExp.prototype[SYMBOL], 'sham', true);
 	  }
 	};
 
@@ -1175,103 +1116,10 @@
 	  }
 	});
 
-	function _classCallCheck(instance, Constructor) {
-	  if (!(instance instanceof Constructor)) {
-	    throw new TypeError("Cannot call a class as a function");
-	  }
-	}
-
-	function _defineProperties(target, props) {
-	  for (var i = 0; i < props.length; i++) {
-	    var descriptor = props[i];
-	    descriptor.enumerable = descriptor.enumerable || false;
-	    descriptor.configurable = true;
-	    if ("value" in descriptor) descriptor.writable = true;
-	    Object.defineProperty(target, descriptor.key, descriptor);
-	  }
-	}
-
-	function _createClass(Constructor, protoProps, staticProps) {
-	  if (protoProps) _defineProperties(Constructor.prototype, protoProps);
-	  if (staticProps) _defineProperties(Constructor, staticProps);
-	  return Constructor;
-	}
-
-	function _inherits(subClass, superClass) {
-	  if (typeof superClass !== "function" && superClass !== null) {
-	    throw new TypeError("Super expression must either be null or a function");
-	  }
-
-	  subClass.prototype = Object.create(superClass && superClass.prototype, {
-	    constructor: {
-	      value: subClass,
-	      writable: true,
-	      configurable: true
-	    }
-	  });
-	  if (superClass) _setPrototypeOf(subClass, superClass);
-	}
-
-	function _getPrototypeOf(o) {
-	  _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) {
-	    return o.__proto__ || Object.getPrototypeOf(o);
-	  };
-	  return _getPrototypeOf(o);
-	}
-
-	function _setPrototypeOf(o, p) {
-	  _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) {
-	    o.__proto__ = p;
-	    return o;
-	  };
-
-	  return _setPrototypeOf(o, p);
-	}
-
-	function _assertThisInitialized(self) {
-	  if (self === void 0) {
-	    throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
-	  }
-
-	  return self;
-	}
-
-	function _possibleConstructorReturn(self, call) {
-	  if (call && (typeof call === "object" || typeof call === "function")) {
-	    return call;
-	  }
-
-	  return _assertThisInitialized(self);
-	}
-
-	function _superPropBase(object, property) {
-	  while (!Object.prototype.hasOwnProperty.call(object, property)) {
-	    object = _getPrototypeOf(object);
-	    if (object === null) break;
-	  }
-
-	  return object;
-	}
-
-	function _get(target, property, receiver) {
-	  if (typeof Reflect !== "undefined" && Reflect.get) {
-	    _get = Reflect.get;
-	  } else {
-	    _get = function _get(target, property, receiver) {
-	      var base = _superPropBase(target, property);
-
-	      if (!base) return;
-	      var desc = Object.getOwnPropertyDescriptor(base, property);
-
-	      if (desc.get) {
-	        return desc.get.call(receiver);
-	      }
-
-	      return desc.value;
-	    };
-	  }
-
-	  return _get(target, property, receiver || target);
+	function _inheritsLoose(subClass, superClass) {
+	  subClass.prototype = Object.create(superClass.prototype);
+	  subClass.prototype.constructor = subClass;
+	  subClass.__proto__ = superClass;
 	}
 
 	/**
@@ -1305,145 +1153,141 @@
 	$.BootstrapTable =
 	/*#__PURE__*/
 	function (_$$BootstrapTable) {
-	  _inherits(_class, _$$BootstrapTable);
+	  _inheritsLoose(_class, _$$BootstrapTable);
 
 	  function _class() {
-	    _classCallCheck(this, _class);
-
-	    return _possibleConstructorReturn(this, _getPrototypeOf(_class).apply(this, arguments));
+	    return _$$BootstrapTable.apply(this, arguments) || this;
 	  }
 
-	  _createClass(_class, [{
-	    key: "initTable",
-	    value: function initTable() {
-	      var _this = this;
+	  var _proto = _class.prototype;
 
-	      _get(_getPrototypeOf(_class.prototype), "initTable", this).call(this);
+	  _proto.initTable = function initTable() {
+	    var _this = this;
 
-	      if (!this.options.editable) {
-	        return;
-	      }
+	    _$$BootstrapTable.prototype.initTable.call(this);
 
-	      $.each(this.columns, function (i, column) {
-	        if (!column.editable) {
-	          return;
-	        }
-
-	        var editableOptions = {};
-	        var editableDataMarkup = [];
-	        var editableDataPrefix = 'editable-';
-
-	        var processDataOptions = function processDataOptions(key, value) {
-	          // Replace camel case with dashes.
-	          var dashKey = key.replace(/([A-Z])/g, function ($1) {
-	            return "-".concat($1.toLowerCase());
-	          });
-
-	          if (dashKey.indexOf(editableDataPrefix) === 0) {
-	            editableOptions[dashKey.replace(editableDataPrefix, 'data-')] = value;
-	          }
-	        };
-
-	        $.each(_this.options, processDataOptions);
-
-	        column.formatter = column.formatter || function (value) {
-	          return value;
-	        };
-
-	        column._formatter = column._formatter ? column._formatter : column.formatter;
-
-	        column.formatter = function (value, row, index) {
-	          var result = Utils.calculateObjectValue(column, column._formatter, [value, row, index], value);
-	          result = typeof result === 'undefined' || result === null ? _this.options.undefinedText : result;
-	          $.each(column, processDataOptions);
-	          $.each(editableOptions, function (key, value) {
-	            editableDataMarkup.push(" ".concat(key, "=\"").concat(value, "\""));
-	          });
-	          var _dont_edit_formatter = false;
-
-	          if (column.editable.hasOwnProperty('noeditFormatter')) {
-	            _dont_edit_formatter = column.editable.noeditFormatter(value, row, index);
-	          }
-
-	          if (_dont_edit_formatter === false) {
-	            return "<a href=\"javascript:void(0)\"\n            data-name=\"".concat(column.field, "\"\n            data-pk=\"").concat(row[_this.options.idField], "\"\n            data-value=\"").concat(result, "\"\n            ").concat(editableDataMarkup.join(''), "></a>");
-	          }
-
-	          return _dont_edit_formatter;
-	        };
-	      });
+	    if (!this.options.editable) {
+	      return;
 	    }
-	  }, {
-	    key: "initBody",
-	    value: function initBody(fixedScroll) {
-	      var _this2 = this;
 
-	      _get(_getPrototypeOf(_class.prototype), "initBody", this).call(this, fixedScroll);
-
-	      if (!this.options.editable) {
+	    $.each(this.columns, function (i, column) {
+	      if (!column.editable) {
 	        return;
 	      }
 
-	      $.each(this.columns, function (i, column) {
-	        if (!column.editable) {
-	          return;
+	      var editableOptions = {};
+	      var editableDataMarkup = [];
+	      var editableDataPrefix = 'editable-';
+
+	      var processDataOptions = function processDataOptions(key, value) {
+	        // Replace camel case with dashes.
+	        var dashKey = key.replace(/([A-Z])/g, function ($1) {
+	          return "-" + $1.toLowerCase();
+	        });
+
+	        if (dashKey.indexOf(editableDataPrefix) === 0) {
+	          editableOptions[dashKey.replace(editableDataPrefix, 'data-')] = value;
 	        }
+	      };
+
+	      $.each(_this.options, processDataOptions);
+
+	      column.formatter = column.formatter || function (value) {
+	        return value;
+	      };
+
+	      column._formatter = column._formatter ? column._formatter : column.formatter;
+
+	      column.formatter = function (value, row, index) {
+	        var result = Utils.calculateObjectValue(column, column._formatter, [value, row, index], value);
+	        result = typeof result === 'undefined' || result === null ? _this.options.undefinedText : result;
+	        $.each(column, processDataOptions);
+	        $.each(editableOptions, function (key, value) {
+	          editableDataMarkup.push(" " + key + "=\"" + value + "\"");
+	        });
+	        var _dont_edit_formatter = false;
+
+	        if (column.editable.hasOwnProperty('noeditFormatter')) {
+	          _dont_edit_formatter = column.editable.noeditFormatter(value, row, index);
+	        }
+
+	        if (_dont_edit_formatter === false) {
+	          return "<a href=\"javascript:void(0)\"\n            data-name=\"" + column.field + "\"\n            data-pk=\"" + row[_this.options.idField] + "\"\n            data-value=\"" + result + "\"\n            " + editableDataMarkup.join('') + "></a>";
+	        }
+
+	        return _dont_edit_formatter;
+	      };
+	    });
+	  };
+
+	  _proto.initBody = function initBody(fixedScroll) {
+	    var _this2 = this;
+
+	    _$$BootstrapTable.prototype.initBody.call(this, fixedScroll);
+
+	    if (!this.options.editable) {
+	      return;
+	    }
+
+	    $.each(this.columns, function (i, column) {
+	      if (!column.editable) {
+	        return;
+	      }
+
+	      var data = _this2.getData();
+
+	      var $field = _this2.$body.find("a[data-name=\"" + column.field + "\"]");
+
+	      $field.each(function (i, element) {
+	        var $element = $(element);
+	        var $tr = $element.closest('tr');
+	        var index = $tr.data('index');
+	        var row = data[index];
+	        var editableOpts = Utils.calculateObjectValue(column, column.editable, [index, row, $element], {});
+	        $element.editable(editableOpts);
+	      });
+	      $field.off('save').on('save', function (_ref, _ref2) {
+	        var currentTarget = _ref.currentTarget;
+	        var submitValue = _ref2.submitValue;
+	        var $this = $(currentTarget);
 
 	        var data = _this2.getData();
 
-	        var $field = _this2.$body.find("a[data-name=\"".concat(column.field, "\"]"));
+	        var rowIndex = $this.parents('tr[data-index]').data('index');
+	        var row = data[rowIndex];
+	        var oldValue = row[column.field];
+	        $this.data('value', submitValue);
+	        row[column.field] = submitValue;
 
-	        $field.each(function (i, element) {
-	          var $element = $(element);
-	          var $tr = $element.closest('tr');
-	          var index = $tr.data('index');
-	          var row = data[index];
-	          var editableOpts = Utils.calculateObjectValue(column, column.editable, [index, row, $element], {});
-	          $element.editable(editableOpts);
-	        });
-	        $field.off('save').on('save', function (_ref, _ref2) {
-	          var currentTarget = _ref.currentTarget;
-	          var submitValue = _ref2.submitValue;
-	          var $this = $(currentTarget);
+	        _this2.trigger('editable-save', column.field, row, rowIndex, oldValue, $this);
 
-	          var data = _this2.getData();
-
-	          var rowIndex = $this.parents('tr[data-index]').data('index');
-	          var row = data[rowIndex];
-	          var oldValue = row[column.field];
-	          $this.data('value', submitValue);
-	          row[column.field] = submitValue;
-
-	          _this2.trigger('editable-save', column.field, row, rowIndex, oldValue, $this);
-
-	          _this2.initBody();
-	        });
-	        $field.off('shown').on('shown', function (_ref3, editable) {
-	          var currentTarget = _ref3.currentTarget;
-	          var $this = $(currentTarget);
-
-	          var data = _this2.getData();
-
-	          var rowIndex = $this.parents('tr[data-index]').data('index');
-	          var row = data[rowIndex];
-
-	          _this2.trigger('editable-shown', column.field, row, $this, editable);
-	        });
-	        $field.off('hidden').on('hidden', function (_ref4, reason) {
-	          var currentTarget = _ref4.currentTarget;
-	          var $this = $(currentTarget);
-
-	          var data = _this2.getData();
-
-	          var rowIndex = $this.parents('tr[data-index]').data('index');
-	          var row = data[rowIndex];
-
-	          _this2.trigger('editable-hidden', column.field, row, $this, reason);
-	        });
+	        _this2.initBody();
 	      });
-	      this.trigger('editable-init');
-	    }
-	  }]);
+	      $field.off('shown').on('shown', function (_ref3, editable) {
+	        var currentTarget = _ref3.currentTarget;
+	        var $this = $(currentTarget);
+
+	        var data = _this2.getData();
+
+	        var rowIndex = $this.parents('tr[data-index]').data('index');
+	        var row = data[rowIndex];
+
+	        _this2.trigger('editable-shown', column.field, row, $this, editable);
+	      });
+	      $field.off('hidden').on('hidden', function (_ref4, reason) {
+	        var currentTarget = _ref4.currentTarget;
+	        var $this = $(currentTarget);
+
+	        var data = _this2.getData();
+
+	        var rowIndex = $this.parents('tr[data-index]').data('index');
+	        var row = data[rowIndex];
+
+	        _this2.trigger('editable-hidden', column.field, row, $this, reason);
+	      });
+	    });
+	    this.trigger('editable-init');
+	  };
 
 	  return _class;
 	}($.BootstrapTable);

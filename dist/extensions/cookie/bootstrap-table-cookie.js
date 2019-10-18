@@ -12,7 +12,6 @@
 		return module = { exports: {} }, fn(module, module.exports), module.exports;
 	}
 
-	var O = 'object';
 	var check = function (it) {
 	  return it && it.Math == Math && it;
 	};
@@ -20,10 +19,10 @@
 	// https://github.com/zloirock/core-js/issues/86#issuecomment-115759028
 	var global_1 =
 	  // eslint-disable-next-line no-undef
-	  check(typeof globalThis == O && globalThis) ||
-	  check(typeof window == O && window) ||
-	  check(typeof self == O && self) ||
-	  check(typeof commonjsGlobal == O && commonjsGlobal) ||
+	  check(typeof globalThis == 'object' && globalThis) ||
+	  check(typeof window == 'object' && window) ||
+	  check(typeof self == 'object' && self) ||
+	  check(typeof commonjsGlobal == 'object' && commonjsGlobal) ||
 	  // eslint-disable-next-line no-new-func
 	  Function('return this')();
 
@@ -179,7 +178,7 @@
 		f: f$2
 	};
 
-	var hide = descriptors ? function (object, key, value) {
+	var createNonEnumerableProperty = descriptors ? function (object, key, value) {
 	  return objectDefineProperty.f(object, key, createPropertyDescriptor(1, value));
 	} : function (object, key, value) {
 	  object[key] = value;
@@ -188,20 +187,22 @@
 
 	var setGlobal = function (key, value) {
 	  try {
-	    hide(global_1, key, value);
+	    createNonEnumerableProperty(global_1, key, value);
 	  } catch (error) {
 	    global_1[key] = value;
 	  } return value;
 	};
 
-	var shared = createCommonjsModule(function (module) {
 	var SHARED = '__core-js_shared__';
 	var store = global_1[SHARED] || setGlobal(SHARED, {});
 
+	var sharedStore = store;
+
+	var shared = createCommonjsModule(function (module) {
 	(module.exports = function (key, value) {
-	  return store[key] || (store[key] = value !== undefined ? value : {});
+	  return sharedStore[key] || (sharedStore[key] = value !== undefined ? value : {});
 	})('versions', []).push({
-	  version: '3.1.3',
+	  version: '3.3.2',
 	  mode:  'global',
 	  copyright: '© 2019 Denis Pushkarev (zloirock.ru)'
 	});
@@ -245,25 +246,25 @@
 	};
 
 	if (nativeWeakMap) {
-	  var store = new WeakMap$1();
-	  var wmget = store.get;
-	  var wmhas = store.has;
-	  var wmset = store.set;
+	  var store$1 = new WeakMap$1();
+	  var wmget = store$1.get;
+	  var wmhas = store$1.has;
+	  var wmset = store$1.set;
 	  set = function (it, metadata) {
-	    wmset.call(store, it, metadata);
+	    wmset.call(store$1, it, metadata);
 	    return metadata;
 	  };
 	  get = function (it) {
-	    return wmget.call(store, it) || {};
+	    return wmget.call(store$1, it) || {};
 	  };
 	  has$1 = function (it) {
-	    return wmhas.call(store, it);
+	    return wmhas.call(store$1, it);
 	  };
 	} else {
 	  var STATE = sharedKey('state');
 	  hiddenKeys[STATE] = true;
 	  set = function (it, metadata) {
-	    hide(it, STATE, metadata);
+	    createNonEnumerableProperty(it, STATE, metadata);
 	    return metadata;
 	  };
 	  get = function (it) {
@@ -296,7 +297,7 @@
 	  var simple = options ? !!options.enumerable : false;
 	  var noTargetGet = options ? !!options.noTargetGet : false;
 	  if (typeof value == 'function') {
-	    if (typeof key == 'string' && !has(value, 'name')) hide(value, 'name', key);
+	    if (typeof key == 'string' && !has(value, 'name')) createNonEnumerableProperty(value, 'name', key);
 	    enforceInternalState(value).source = TEMPLATE.join(typeof key == 'string' ? key : '');
 	  }
 	  if (O === global_1) {
@@ -309,7 +310,7 @@
 	    simple = true;
 	  }
 	  if (simple) O[key] = value;
-	  else hide(O, key, value);
+	  else createNonEnumerableProperty(O, key, value);
 	// add fake Function#toString for correct work wrapped methods / constructors with methods like LoDash isNative
 	})(Function.prototype, 'toString', function toString() {
 	  return typeof this == 'function' && getInternalState(this).source || functionToString.call(this);
@@ -513,7 +514,7 @@
 	    }
 	    // add a flag to not completely full polyfills
 	    if (options.sham || (targetProperty && targetProperty.sham)) {
-	      hide(sourceProperty, 'sham', true);
+	      createNonEnumerableProperty(sourceProperty, 'sham', true);
 	    }
 	    // extend global
 	    redefine(target, key, sourceProperty, options);
@@ -545,10 +546,10 @@
 	});
 
 	var Symbol$1 = global_1.Symbol;
-	var store$1 = shared('wks');
+	var store$2 = shared('wks');
 
 	var wellKnownSymbol = function (name) {
-	  return store$1[name] || (store$1[name] = nativeSymbol && Symbol$1[name]
+	  return store$2[name] || (store$2[name] = nativeSymbol && Symbol$1[name]
 	    || (nativeSymbol ? Symbol$1 : uid)('Symbol.' + name));
 	};
 
@@ -797,7 +798,7 @@
 	// Array.prototype[@@unscopables]
 	// https://tc39.github.io/ecma262/#sec-array.prototype-@@unscopables
 	if (ArrayPrototype[UNSCOPABLES] == undefined) {
-	  hide(ArrayPrototype, UNSCOPABLES, objectCreate(null));
+	  createNonEnumerableProperty(ArrayPrototype, UNSCOPABLES, objectCreate(null));
 	}
 
 	// add a key to Array.prototype[@@unscopables]
@@ -845,6 +846,22 @@
 	    return nativeJoin.call(toIndexedObject(this), separator === undefined ? ',' : separator);
 	  }
 	});
+
+	var DatePrototype = Date.prototype;
+	var INVALID_DATE = 'Invalid Date';
+	var TO_STRING = 'toString';
+	var nativeDateToString = DatePrototype[TO_STRING];
+	var getTime = DatePrototype.getTime;
+
+	// `Date.prototype.toString` method
+	// https://tc39.github.io/ecma262/#sec-date.prototype.tostring
+	if (new Date(NaN) + '' != INVALID_DATE) {
+	  redefine(DatePrototype, TO_STRING, function toString() {
+	    var value = getTime.call(this);
+	    // eslint-disable-next-line no-self-compare
+	    return value === value ? nativeDateToString.call(this) : INVALID_DATE;
+	  });
+	}
 
 	// `RegExp.prototype.flags` getter implementation
 	// https://tc39.github.io/ecma262/#sec-get-regexp.prototype.flags
@@ -911,6 +928,10 @@
 	}
 
 	var regexpExec = patchedExec;
+
+	_export({ target: 'RegExp', proto: true, forced: /./.exec !== regexpExec }, {
+	  exec: regexpExec
+	});
 
 	var SPECIES$2 = wellKnownSymbol('species');
 
@@ -995,7 +1016,7 @@
 	      // 21.2.5.9 RegExp.prototype[@@search](string)
 	      : function (string) { return regexMethod.call(string, this); }
 	    );
-	    if (sham) hide(RegExp.prototype[SYMBOL], 'sham', true);
+	    if (sham) createNonEnumerableProperty(RegExp.prototype[SYMBOL], 'sham', true);
 	  }
 	};
 
@@ -1345,103 +1366,37 @@
 	  ];
 	}, !SUPPORTS_Y);
 
-	function _classCallCheck(instance, Constructor) {
-	  if (!(instance instanceof Constructor)) {
-	    throw new TypeError("Cannot call a class as a function");
-	  }
-	}
+	var userAgent = getBuiltIn('navigator', 'userAgent') || '';
 
-	function _defineProperties(target, props) {
-	  for (var i = 0; i < props.length; i++) {
-	    var descriptor = props[i];
-	    descriptor.enumerable = descriptor.enumerable || false;
-	    descriptor.configurable = true;
-	    if ("value" in descriptor) descriptor.writable = true;
-	    Object.defineProperty(target, descriptor.key, descriptor);
-	  }
-	}
+	var slice = [].slice;
+	var MSIE = /MSIE .\./.test(userAgent); // <- dirty ie9- check
 
-	function _createClass(Constructor, protoProps, staticProps) {
-	  if (protoProps) _defineProperties(Constructor.prototype, protoProps);
-	  if (staticProps) _defineProperties(Constructor, staticProps);
-	  return Constructor;
-	}
-
-	function _inherits(subClass, superClass) {
-	  if (typeof superClass !== "function" && superClass !== null) {
-	    throw new TypeError("Super expression must either be null or a function");
-	  }
-
-	  subClass.prototype = Object.create(superClass && superClass.prototype, {
-	    constructor: {
-	      value: subClass,
-	      writable: true,
-	      configurable: true
-	    }
-	  });
-	  if (superClass) _setPrototypeOf(subClass, superClass);
-	}
-
-	function _getPrototypeOf(o) {
-	  _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) {
-	    return o.__proto__ || Object.getPrototypeOf(o);
+	var wrap = function (scheduler) {
+	  return function (handler, timeout /* , ...arguments */) {
+	    var boundArgs = arguments.length > 2;
+	    var args = boundArgs ? slice.call(arguments, 2) : undefined;
+	    return scheduler(boundArgs ? function () {
+	      // eslint-disable-next-line no-new-func
+	      (typeof handler == 'function' ? handler : Function(handler)).apply(this, args);
+	    } : handler, timeout);
 	  };
-	  return _getPrototypeOf(o);
-	}
+	};
 
-	function _setPrototypeOf(o, p) {
-	  _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) {
-	    o.__proto__ = p;
-	    return o;
-	  };
+	// ie9- setTimeout & setInterval additional parameters fix
+	// https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#timers
+	_export({ global: true, bind: true, forced: MSIE }, {
+	  // `setTimeout` method
+	  // https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#dom-settimeout
+	  setTimeout: wrap(global_1.setTimeout),
+	  // `setInterval` method
+	  // https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#dom-setinterval
+	  setInterval: wrap(global_1.setInterval)
+	});
 
-	  return _setPrototypeOf(o, p);
-	}
-
-	function _assertThisInitialized(self) {
-	  if (self === void 0) {
-	    throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
-	  }
-
-	  return self;
-	}
-
-	function _possibleConstructorReturn(self, call) {
-	  if (call && (typeof call === "object" || typeof call === "function")) {
-	    return call;
-	  }
-
-	  return _assertThisInitialized(self);
-	}
-
-	function _superPropBase(object, property) {
-	  while (!Object.prototype.hasOwnProperty.call(object, property)) {
-	    object = _getPrototypeOf(object);
-	    if (object === null) break;
-	  }
-
-	  return object;
-	}
-
-	function _get(target, property, receiver) {
-	  if (typeof Reflect !== "undefined" && Reflect.get) {
-	    _get = Reflect.get;
-	  } else {
-	    _get = function _get(target, property, receiver) {
-	      var base = _superPropBase(target, property);
-
-	      if (!base) return;
-	      var desc = Object.getOwnPropertyDescriptor(base, property);
-
-	      if (desc.get) {
-	        return desc.get.call(receiver);
-	      }
-
-	      return desc.value;
-	    };
-	  }
-
-	  return _get(target, property, receiver || target);
+	function _inheritsLoose(subClass, superClass) {
+	  subClass.prototype = Object.create(superClass.prototype);
+	  subClass.prototype.constructor = subClass;
+	  subClass.__proto__ = superClass;
 	}
 
 	/**
@@ -1503,11 +1458,11 @@
 	      return;
 	    }
 
-	    cookieName = "".concat(that.options.cookieIdTable, ".").concat(cookieName);
+	    cookieName = that.options.cookieIdTable + "." + cookieName;
 
 	    switch (that.options.cookieStorage) {
 	      case 'cookieStorage':
-	        document.cookie = [cookieName, '=', encodeURIComponent(cookieValue), "; expires=".concat(UtilsCookie.calculateExpiration(that.options.cookieExpire)), that.options.cookiePath ? "; path=".concat(that.options.cookiePath) : '', that.options.cookieDomain ? "; domain=".concat(that.options.cookieDomain) : '', that.options.cookieSecure ? '; secure' : ''].join('');
+	        document.cookie = [cookieName, '=', encodeURIComponent(cookieValue), "; expires=" + UtilsCookie.calculateExpiration(that.options.cookieExpire), that.options.cookiePath ? "; path=" + that.options.cookiePath : '', that.options.cookieDomain ? "; domain=" + that.options.cookieDomain : '', that.options.cookieSecure ? '; secure' : ''].join('');
 	        break;
 
 	      case 'localStorage':
@@ -1533,12 +1488,12 @@
 	      return null;
 	    }
 
-	    cookieName = "".concat(tableName, ".").concat(cookieName);
+	    cookieName = tableName + "." + cookieName;
 
 	    switch (that.options.cookieStorage) {
 	      case 'cookieStorage':
-	        var value = "; ".concat(document.cookie);
-	        var parts = value.split("; ".concat(cookieName, "="));
+	        var value = "; " + document.cookie;
+	        var parts = value.split("; " + cookieName + "=");
 	        return parts.length === 2 ? decodeURIComponent(parts.pop().split(';').shift()) : null;
 
 	      case 'localStorage':
@@ -1552,11 +1507,11 @@
 	    }
 	  },
 	  deleteCookie: function deleteCookie(that, tableName, cookieName) {
-	    cookieName = "".concat(tableName, ".").concat(cookieName);
+	    cookieName = tableName + "." + cookieName;
 
 	    switch (that.options.cookieStorage) {
 	      case 'cookieStorage':
-	        document.cookie = [encodeURIComponent(cookieName), '=', '; expires=Thu, 01 Jan 1970 00:00:00 GMT', that.options.cookiePath ? "; path=".concat(that.options.cookiePath) : '', that.options.cookieDomain ? "; domain=".concat(that.options.cookieDomain) : ''].join('');
+	        document.cookie = [encodeURIComponent(cookieName), '=', '; expires=Thu, 01 Jan 1970 00:00:00 GMT', that.options.cookiePath ? "; path=" + that.options.cookiePath : '', that.options.cookieDomain ? "; domain=" + that.options.cookieDomain : ''].join('');
 	        break;
 
 	      case 'localStorage':
@@ -1672,261 +1627,244 @@
 	$.BootstrapTable =
 	/*#__PURE__*/
 	function (_$$BootstrapTable) {
-	  _inherits(_class, _$$BootstrapTable);
+	  _inheritsLoose(_class, _$$BootstrapTable);
 
 	  function _class() {
-	    _classCallCheck(this, _class);
-
-	    return _possibleConstructorReturn(this, _getPrototypeOf(_class).apply(this, arguments));
+	    return _$$BootstrapTable.apply(this, arguments) || this;
 	  }
 
-	  _createClass(_class, [{
-	    key: "init",
-	    value: function init() {
-	      // FilterBy logic
-	      var filterByCookie = JSON.parse(UtilsCookie.getCookie(this, this.options.cookieIdTable, UtilsCookie.cookieIds.filterBy));
-	      this.filterColumns = filterByCookie ? filterByCookie : {}; // FilterControl logic
+	  var _proto = _class.prototype;
 
-	      this.options.filterControls = [];
-	      this.options.filterControlValuesLoaded = false;
-	      this.options.cookiesEnabled = typeof this.options.cookiesEnabled === 'string' ? this.options.cookiesEnabled.replace('[', '').replace(']', '').replace(/ /g, '').toLowerCase().split(',') : this.options.cookiesEnabled;
+	  _proto.init = function init() {
+	    // FilterBy logic
+	    var filterByCookie = JSON.parse(UtilsCookie.getCookie(this, this.options.cookieIdTable, UtilsCookie.cookieIds.filterBy));
+	    this.filterColumns = filterByCookie ? filterByCookie : {}; // FilterControl logic
 
-	      if (this.options.filterControl) {
-	        var that = this;
-	        this.$el.on('column-search.bs.table', function (e, field, text) {
-	          var isNewField = true;
+	    this.options.filterControls = [];
+	    this.options.filterControlValuesLoaded = false;
+	    this.options.cookiesEnabled = typeof this.options.cookiesEnabled === 'string' ? this.options.cookiesEnabled.replace('[', '').replace(']', '').replace(/ /g, '').toLowerCase().split(',') : this.options.cookiesEnabled;
 
-	          for (var i = 0; i < that.options.filterControls.length; i++) {
-	            if (that.options.filterControls[i].field === field) {
-	              that.options.filterControls[i].text = text;
-	              isNewField = false;
-	              break;
-	            }
+	    if (this.options.filterControl) {
+	      var that = this;
+	      this.$el.on('column-search.bs.table', function (e, field, text) {
+	        var isNewField = true;
+
+	        for (var i = 0; i < that.options.filterControls.length; i++) {
+	          if (that.options.filterControls[i].field === field) {
+	            that.options.filterControls[i].text = text;
+	            isNewField = false;
+	            break;
 	          }
-
-	          if (isNewField) {
-	            that.options.filterControls.push({
-	              field: field,
-	              text: text
-	            });
-	          }
-
-	          UtilsCookie.setCookie(that, UtilsCookie.cookieIds.filterControl, JSON.stringify(that.options.filterControls));
-	        }).on('created-controls.bs.table', UtilsCookie.initCookieFilters(that));
-	      }
-
-	      _get(_getPrototypeOf(_class.prototype), "init", this).call(this);
-	    }
-	  }, {
-	    key: "initServer",
-	    value: function initServer() {
-	      var _get2;
-
-	      if (this.options.cookie && this.options.filterControl && !this.options.filterControlValuesLoaded) {
-	        var cookie = JSON.parse(UtilsCookie.getCookie(this, this.options.cookieIdTable, UtilsCookie.cookieIds.filterControl));
-
-	        if (cookie) {
-	          return;
 	        }
-	      }
 
-	      for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
-	        args[_key] = arguments[_key];
-	      }
+	        if (isNewField) {
+	          that.options.filterControls.push({
+	            field: field,
+	            text: text
+	          });
+	        }
 
-	      (_get2 = _get(_getPrototypeOf(_class.prototype), "initServer", this)).call.apply(_get2, [this].concat(args));
+	        UtilsCookie.setCookie(that, UtilsCookie.cookieIds.filterControl, JSON.stringify(that.options.filterControls));
+	      }).on('created-controls.bs.table', UtilsCookie.initCookieFilters(that));
 	    }
-	  }, {
-	    key: "initTable",
-	    value: function initTable() {
-	      var _get3;
 
-	      for (var _len2 = arguments.length, args = new Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-	        args[_key2] = arguments[_key2];
+	    _$$BootstrapTable.prototype.init.call(this);
+	  };
+
+	  _proto.initServer = function initServer() {
+	    var _$$BootstrapTable$pro;
+
+	    if (this.options.cookie && this.options.filterControl && !this.options.filterControlValuesLoaded) {
+	      var cookie = JSON.parse(UtilsCookie.getCookie(this, this.options.cookieIdTable, UtilsCookie.cookieIds.filterControl));
+
+	      if (cookie) {
+	        return;
 	      }
-
-	      (_get3 = _get(_getPrototypeOf(_class.prototype), "initTable", this)).call.apply(_get3, [this].concat(args));
-
-	      this.initCookie();
 	    }
-	  }, {
-	    key: "onSort",
-	    value: function onSort() {
-	      var _get4;
 
-	      for (var _len3 = arguments.length, args = new Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
-	        args[_key3] = arguments[_key3];
-	      }
-
-	      (_get4 = _get(_getPrototypeOf(_class.prototype), "onSort", this)).call.apply(_get4, [this].concat(args));
-
-	      UtilsCookie.setCookie(this, UtilsCookie.cookieIds.sortOrder, this.options.sortOrder);
-	      UtilsCookie.setCookie(this, UtilsCookie.cookieIds.sortName, this.options.sortName);
+	    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+	      args[_key] = arguments[_key];
 	    }
-	  }, {
-	    key: "onPageNumber",
-	    value: function onPageNumber() {
-	      var _get5;
 
-	      for (var _len4 = arguments.length, args = new Array(_len4), _key4 = 0; _key4 < _len4; _key4++) {
-	        args[_key4] = arguments[_key4];
-	      }
+	    (_$$BootstrapTable$pro = _$$BootstrapTable.prototype.initServer).call.apply(_$$BootstrapTable$pro, [this].concat(args));
+	  };
 
-	      (_get5 = _get(_getPrototypeOf(_class.prototype), "onPageNumber", this)).call.apply(_get5, [this].concat(args));
+	  _proto.initTable = function initTable() {
+	    var _$$BootstrapTable$pro2;
 
-	      UtilsCookie.setCookie(this, UtilsCookie.cookieIds.pageNumber, this.options.pageNumber);
+	    for (var _len2 = arguments.length, args = new Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+	      args[_key2] = arguments[_key2];
 	    }
-	  }, {
-	    key: "onPageListChange",
-	    value: function onPageListChange() {
-	      var _get6;
 
-	      for (var _len5 = arguments.length, args = new Array(_len5), _key5 = 0; _key5 < _len5; _key5++) {
-	        args[_key5] = arguments[_key5];
-	      }
+	    (_$$BootstrapTable$pro2 = _$$BootstrapTable.prototype.initTable).call.apply(_$$BootstrapTable$pro2, [this].concat(args));
 
-	      (_get6 = _get(_getPrototypeOf(_class.prototype), "onPageListChange", this)).call.apply(_get6, [this].concat(args));
+	    this.initCookie();
+	  };
 
-	      UtilsCookie.setCookie(this, UtilsCookie.cookieIds.pageList, this.options.pageSize);
-	      UtilsCookie.setCookie(this, UtilsCookie.cookieIds.pageNumber, this.options.pageNumber);
+	  _proto.onSort = function onSort() {
+	    var _$$BootstrapTable$pro3;
+
+	    for (var _len3 = arguments.length, args = new Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
+	      args[_key3] = arguments[_key3];
 	    }
-	  }, {
-	    key: "onPagePre",
-	    value: function onPagePre() {
-	      var _get7;
 
-	      for (var _len6 = arguments.length, args = new Array(_len6), _key6 = 0; _key6 < _len6; _key6++) {
-	        args[_key6] = arguments[_key6];
-	      }
+	    (_$$BootstrapTable$pro3 = _$$BootstrapTable.prototype.onSort).call.apply(_$$BootstrapTable$pro3, [this].concat(args));
 
-	      (_get7 = _get(_getPrototypeOf(_class.prototype), "onPagePre", this)).call.apply(_get7, [this].concat(args));
+	    UtilsCookie.setCookie(this, UtilsCookie.cookieIds.sortOrder, this.options.sortOrder);
+	    UtilsCookie.setCookie(this, UtilsCookie.cookieIds.sortName, this.options.sortName);
+	  };
 
-	      UtilsCookie.setCookie(this, UtilsCookie.cookieIds.pageNumber, this.options.pageNumber);
+	  _proto.onPageNumber = function onPageNumber() {
+	    var _$$BootstrapTable$pro4;
+
+	    for (var _len4 = arguments.length, args = new Array(_len4), _key4 = 0; _key4 < _len4; _key4++) {
+	      args[_key4] = arguments[_key4];
 	    }
-	  }, {
-	    key: "onPageNext",
-	    value: function onPageNext() {
-	      var _get8;
 
-	      for (var _len7 = arguments.length, args = new Array(_len7), _key7 = 0; _key7 < _len7; _key7++) {
-	        args[_key7] = arguments[_key7];
-	      }
+	    (_$$BootstrapTable$pro4 = _$$BootstrapTable.prototype.onPageNumber).call.apply(_$$BootstrapTable$pro4, [this].concat(args));
 
-	      (_get8 = _get(_getPrototypeOf(_class.prototype), "onPageNext", this)).call.apply(_get8, [this].concat(args));
+	    UtilsCookie.setCookie(this, UtilsCookie.cookieIds.pageNumber, this.options.pageNumber);
+	  };
 
-	      UtilsCookie.setCookie(this, UtilsCookie.cookieIds.pageNumber, this.options.pageNumber);
+	  _proto.onPageListChange = function onPageListChange() {
+	    var _$$BootstrapTable$pro5;
+
+	    for (var _len5 = arguments.length, args = new Array(_len5), _key5 = 0; _key5 < _len5; _key5++) {
+	      args[_key5] = arguments[_key5];
 	    }
-	  }, {
-	    key: "_toggleColumn",
-	    value: function _toggleColumn() {
-	      var _get9;
 
-	      for (var _len8 = arguments.length, args = new Array(_len8), _key8 = 0; _key8 < _len8; _key8++) {
-	        args[_key8] = arguments[_key8];
+	    (_$$BootstrapTable$pro5 = _$$BootstrapTable.prototype.onPageListChange).call.apply(_$$BootstrapTable$pro5, [this].concat(args));
+
+	    UtilsCookie.setCookie(this, UtilsCookie.cookieIds.pageList, this.options.pageSize);
+	    UtilsCookie.setCookie(this, UtilsCookie.cookieIds.pageNumber, this.options.pageNumber);
+	  };
+
+	  _proto.onPagePre = function onPagePre() {
+	    var _$$BootstrapTable$pro6;
+
+	    for (var _len6 = arguments.length, args = new Array(_len6), _key6 = 0; _key6 < _len6; _key6++) {
+	      args[_key6] = arguments[_key6];
+	    }
+
+	    (_$$BootstrapTable$pro6 = _$$BootstrapTable.prototype.onPagePre).call.apply(_$$BootstrapTable$pro6, [this].concat(args));
+
+	    UtilsCookie.setCookie(this, UtilsCookie.cookieIds.pageNumber, this.options.pageNumber);
+	  };
+
+	  _proto.onPageNext = function onPageNext() {
+	    var _$$BootstrapTable$pro7;
+
+	    for (var _len7 = arguments.length, args = new Array(_len7), _key7 = 0; _key7 < _len7; _key7++) {
+	      args[_key7] = arguments[_key7];
+	    }
+
+	    (_$$BootstrapTable$pro7 = _$$BootstrapTable.prototype.onPageNext).call.apply(_$$BootstrapTable$pro7, [this].concat(args));
+
+	    UtilsCookie.setCookie(this, UtilsCookie.cookieIds.pageNumber, this.options.pageNumber);
+	  };
+
+	  _proto._toggleColumn = function _toggleColumn() {
+	    var _$$BootstrapTable$pro8;
+
+	    for (var _len8 = arguments.length, args = new Array(_len8), _key8 = 0; _key8 < _len8; _key8++) {
+	      args[_key8] = arguments[_key8];
+	    }
+
+	    (_$$BootstrapTable$pro8 = _$$BootstrapTable.prototype._toggleColumn).call.apply(_$$BootstrapTable$pro8, [this].concat(args));
+
+	    var visibleColumns = [];
+	    $.each(this.columns, function (i, column) {
+	      if (column.visible) {
+	        visibleColumns.push(column.field);
 	      }
+	    });
+	    UtilsCookie.setCookie(this, UtilsCookie.cookieIds.columns, JSON.stringify(visibleColumns));
+	  };
 
-	      (_get9 = _get(_getPrototypeOf(_class.prototype), "_toggleColumn", this)).call.apply(_get9, [this].concat(args));
+	  _proto.selectPage = function selectPage(page) {
+	    _$$BootstrapTable.prototype.selectPage.call(this, page);
 
-	      var visibleColumns = [];
+	    UtilsCookie.setCookie(this, UtilsCookie.cookieIds.pageNumber, page);
+	  };
+
+	  _proto.onSearch = function onSearch(event) {
+	    _$$BootstrapTable.prototype.onSearch.call(this, event);
+
+	    if (this.options.search) {
+	      UtilsCookie.setCookie(this, UtilsCookie.cookieIds.searchText, this.searchText);
+	    }
+
+	    UtilsCookie.setCookie(this, UtilsCookie.cookieIds.pageNumber, this.options.pageNumber);
+	  };
+
+	  _proto.filterBy = function filterBy() {
+	    var _$$BootstrapTable$pro9;
+
+	    for (var _len9 = arguments.length, args = new Array(_len9), _key9 = 0; _key9 < _len9; _key9++) {
+	      args[_key9] = arguments[_key9];
+	    }
+
+	    (_$$BootstrapTable$pro9 = _$$BootstrapTable.prototype.filterBy).call.apply(_$$BootstrapTable$pro9, [this].concat(args));
+
+	    UtilsCookie.setCookie(this, UtilsCookie.cookieIds.filterBy, JSON.stringify(this.filterColumns));
+	  };
+
+	  _proto.initCookie = function initCookie() {
+	    if (!this.options.cookie) {
+	      return;
+	    }
+
+	    if (this.options.cookieIdTable === '' || this.options.cookieExpire === '' || !UtilsCookie.cookieEnabled()) {
+	      console.error('Configuration error. Please review the cookieIdTable and the cookieExpire property. If the properties are correct, then this browser does not support cookies.');
+	      this.options.cookie = false; // Make sure that the cookie extension is disabled
+
+	      return;
+	    }
+
+	    var sortOrderCookie = UtilsCookie.getCookie(this, this.options.cookieIdTable, UtilsCookie.cookieIds.sortOrder);
+	    var sortOrderNameCookie = UtilsCookie.getCookie(this, this.options.cookieIdTable, UtilsCookie.cookieIds.sortName);
+	    var pageNumberCookie = UtilsCookie.getCookie(this, this.options.cookieIdTable, UtilsCookie.cookieIds.pageNumber);
+	    var pageListCookie = UtilsCookie.getCookie(this, this.options.cookieIdTable, UtilsCookie.cookieIds.pageList);
+	    var columnsCookie = JSON.parse(UtilsCookie.getCookie(this, this.options.cookieIdTable, UtilsCookie.cookieIds.columns));
+	    var searchTextCookie = UtilsCookie.getCookie(this, this.options.cookieIdTable, UtilsCookie.cookieIds.searchText); // sortOrder
+
+	    this.options.sortOrder = sortOrderCookie ? sortOrderCookie : this.options.sortOrder; // sortName
+
+	    this.options.sortName = sortOrderNameCookie ? sortOrderNameCookie : this.options.sortName; // pageNumber
+
+	    this.options.pageNumber = pageNumberCookie ? +pageNumberCookie : this.options.pageNumber; // pageSize
+
+	    this.options.pageSize = pageListCookie ? pageListCookie === this.options.formatAllRows() ? pageListCookie : +pageListCookie : this.options.pageSize; // searchText
+
+	    this.options.searchText = searchTextCookie ? searchTextCookie : '';
+
+	    if (columnsCookie) {
 	      $.each(this.columns, function (i, column) {
-	        if (column.visible) {
-	          visibleColumns.push(column.field);
-	        }
+	        column.visible = $.inArray(column.field, columnsCookie) !== -1;
 	      });
-	      UtilsCookie.setCookie(this, UtilsCookie.cookieIds.columns, JSON.stringify(visibleColumns));
 	    }
-	  }, {
-	    key: "selectPage",
-	    value: function selectPage(page) {
-	      _get(_getPrototypeOf(_class.prototype), "selectPage", this).call(this, page);
+	  };
 
-	      UtilsCookie.setCookie(this, UtilsCookie.cookieIds.pageNumber, page);
-	    }
-	  }, {
-	    key: "onSearch",
-	    value: function onSearch(event) {
-	      _get(_getPrototypeOf(_class.prototype), "onSearch", this).call(this, event);
+	  _proto.getCookies = function getCookies() {
+	    var bootstrapTable = this;
+	    var cookies = {};
+	    $.each(UtilsCookie.cookieIds, function (key, value) {
+	      cookies[key] = UtilsCookie.getCookie(bootstrapTable, bootstrapTable.options.cookieIdTable, value);
 
-	      if (this.options.search) {
-	        UtilsCookie.setCookie(this, UtilsCookie.cookieIds.searchText, this.searchText);
+	      if (key === 'columns') {
+	        cookies[key] = JSON.parse(cookies[key]);
 	      }
+	    });
+	    return cookies;
+	  };
 
-	      UtilsCookie.setCookie(this, UtilsCookie.cookieIds.pageNumber, this.options.pageNumber);
+	  _proto.deleteCookie = function deleteCookie(cookieName) {
+	    if (cookieName === '' || !UtilsCookie.cookieEnabled()) {
+	      return;
 	    }
-	  }, {
-	    key: "filterBy",
-	    value: function filterBy() {
-	      var _get10;
 
-	      for (var _len9 = arguments.length, args = new Array(_len9), _key9 = 0; _key9 < _len9; _key9++) {
-	        args[_key9] = arguments[_key9];
-	      }
-
-	      (_get10 = _get(_getPrototypeOf(_class.prototype), "filterBy", this)).call.apply(_get10, [this].concat(args));
-
-	      UtilsCookie.setCookie(this, UtilsCookie.cookieIds.filterBy, JSON.stringify(this.filterColumns));
-	    }
-	  }, {
-	    key: "initCookie",
-	    value: function initCookie() {
-	      if (!this.options.cookie) {
-	        return;
-	      }
-
-	      if (this.options.cookieIdTable === '' || this.options.cookieExpire === '' || !UtilsCookie.cookieEnabled()) {
-	        console.error('Configuration error. Please review the cookieIdTable and the cookieExpire property. If the properties are correct, then this browser does not support cookies.');
-	        this.options.cookie = false; // Make sure that the cookie extension is disabled
-
-	        return;
-	      }
-
-	      var sortOrderCookie = UtilsCookie.getCookie(this, this.options.cookieIdTable, UtilsCookie.cookieIds.sortOrder);
-	      var sortOrderNameCookie = UtilsCookie.getCookie(this, this.options.cookieIdTable, UtilsCookie.cookieIds.sortName);
-	      var pageNumberCookie = UtilsCookie.getCookie(this, this.options.cookieIdTable, UtilsCookie.cookieIds.pageNumber);
-	      var pageListCookie = UtilsCookie.getCookie(this, this.options.cookieIdTable, UtilsCookie.cookieIds.pageList);
-	      var columnsCookie = JSON.parse(UtilsCookie.getCookie(this, this.options.cookieIdTable, UtilsCookie.cookieIds.columns));
-	      var searchTextCookie = UtilsCookie.getCookie(this, this.options.cookieIdTable, UtilsCookie.cookieIds.searchText); // sortOrder
-
-	      this.options.sortOrder = sortOrderCookie ? sortOrderCookie : this.options.sortOrder; // sortName
-
-	      this.options.sortName = sortOrderNameCookie ? sortOrderNameCookie : this.options.sortName; // pageNumber
-
-	      this.options.pageNumber = pageNumberCookie ? +pageNumberCookie : this.options.pageNumber; // pageSize
-
-	      this.options.pageSize = pageListCookie ? pageListCookie === this.options.formatAllRows() ? pageListCookie : +pageListCookie : this.options.pageSize; // searchText
-
-	      this.options.searchText = searchTextCookie ? searchTextCookie : '';
-
-	      if (columnsCookie) {
-	        $.each(this.columns, function (i, column) {
-	          column.visible = $.inArray(column.field, columnsCookie) !== -1;
-	        });
-	      }
-	    }
-	  }, {
-	    key: "getCookies",
-	    value: function getCookies() {
-	      var bootstrapTable = this;
-	      var cookies = {};
-	      $.each(UtilsCookie.cookieIds, function (key, value) {
-	        cookies[key] = UtilsCookie.getCookie(bootstrapTable, bootstrapTable.options.cookieIdTable, value);
-
-	        if (key === 'columns') {
-	          cookies[key] = JSON.parse(cookies[key]);
-	        }
-	      });
-	      return cookies;
-	    }
-	  }, {
-	    key: "deleteCookie",
-	    value: function deleteCookie(cookieName) {
-	      if (cookieName === '' || !UtilsCookie.cookieEnabled()) {
-	        return;
-	      }
-
-	      UtilsCookie.deleteCookie(this, this.options.cookieIdTable, UtilsCookie.cookieIds[cookieName]);
-	    }
-	  }]);
+	    UtilsCookie.deleteCookie(this, this.options.cookieIdTable, UtilsCookie.cookieIds[cookieName]);
+	  };
 
 	  return _class;
 	}($.BootstrapTable);

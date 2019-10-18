@@ -12,7 +12,6 @@
 		return module = { exports: {} }, fn(module, module.exports), module.exports;
 	}
 
-	var O = 'object';
 	var check = function (it) {
 	  return it && it.Math == Math && it;
 	};
@@ -20,10 +19,10 @@
 	// https://github.com/zloirock/core-js/issues/86#issuecomment-115759028
 	var global_1 =
 	  // eslint-disable-next-line no-undef
-	  check(typeof globalThis == O && globalThis) ||
-	  check(typeof window == O && window) ||
-	  check(typeof self == O && self) ||
-	  check(typeof commonjsGlobal == O && commonjsGlobal) ||
+	  check(typeof globalThis == 'object' && globalThis) ||
+	  check(typeof window == 'object' && window) ||
+	  check(typeof self == 'object' && self) ||
+	  check(typeof commonjsGlobal == 'object' && commonjsGlobal) ||
 	  // eslint-disable-next-line no-new-func
 	  Function('return this')();
 
@@ -179,7 +178,7 @@
 		f: f$2
 	};
 
-	var hide = descriptors ? function (object, key, value) {
+	var createNonEnumerableProperty = descriptors ? function (object, key, value) {
 	  return objectDefineProperty.f(object, key, createPropertyDescriptor(1, value));
 	} : function (object, key, value) {
 	  object[key] = value;
@@ -188,20 +187,22 @@
 
 	var setGlobal = function (key, value) {
 	  try {
-	    hide(global_1, key, value);
+	    createNonEnumerableProperty(global_1, key, value);
 	  } catch (error) {
 	    global_1[key] = value;
 	  } return value;
 	};
 
-	var shared = createCommonjsModule(function (module) {
 	var SHARED = '__core-js_shared__';
 	var store = global_1[SHARED] || setGlobal(SHARED, {});
 
+	var sharedStore = store;
+
+	var shared = createCommonjsModule(function (module) {
 	(module.exports = function (key, value) {
-	  return store[key] || (store[key] = value !== undefined ? value : {});
+	  return sharedStore[key] || (sharedStore[key] = value !== undefined ? value : {});
 	})('versions', []).push({
-	  version: '3.1.3',
+	  version: '3.3.2',
 	  mode:  'global',
 	  copyright: '© 2019 Denis Pushkarev (zloirock.ru)'
 	});
@@ -245,25 +246,25 @@
 	};
 
 	if (nativeWeakMap) {
-	  var store = new WeakMap$1();
-	  var wmget = store.get;
-	  var wmhas = store.has;
-	  var wmset = store.set;
+	  var store$1 = new WeakMap$1();
+	  var wmget = store$1.get;
+	  var wmhas = store$1.has;
+	  var wmset = store$1.set;
 	  set = function (it, metadata) {
-	    wmset.call(store, it, metadata);
+	    wmset.call(store$1, it, metadata);
 	    return metadata;
 	  };
 	  get = function (it) {
-	    return wmget.call(store, it) || {};
+	    return wmget.call(store$1, it) || {};
 	  };
 	  has$1 = function (it) {
-	    return wmhas.call(store, it);
+	    return wmhas.call(store$1, it);
 	  };
 	} else {
 	  var STATE = sharedKey('state');
 	  hiddenKeys[STATE] = true;
 	  set = function (it, metadata) {
-	    hide(it, STATE, metadata);
+	    createNonEnumerableProperty(it, STATE, metadata);
 	    return metadata;
 	  };
 	  get = function (it) {
@@ -296,7 +297,7 @@
 	  var simple = options ? !!options.enumerable : false;
 	  var noTargetGet = options ? !!options.noTargetGet : false;
 	  if (typeof value == 'function') {
-	    if (typeof key == 'string' && !has(value, 'name')) hide(value, 'name', key);
+	    if (typeof key == 'string' && !has(value, 'name')) createNonEnumerableProperty(value, 'name', key);
 	    enforceInternalState(value).source = TEMPLATE.join(typeof key == 'string' ? key : '');
 	  }
 	  if (O === global_1) {
@@ -309,7 +310,7 @@
 	    simple = true;
 	  }
 	  if (simple) O[key] = value;
-	  else hide(O, key, value);
+	  else createNonEnumerableProperty(O, key, value);
 	// add fake Function#toString for correct work wrapped methods / constructors with methods like LoDash isNative
 	})(Function.prototype, 'toString', function toString() {
 	  return typeof this == 'function' && getInternalState(this).source || functionToString.call(this);
@@ -513,7 +514,7 @@
 	    }
 	    // add a flag to not completely full polyfills
 	    if (options.sham || (targetProperty && targetProperty.sham)) {
-	      hide(sourceProperty, 'sham', true);
+	      createNonEnumerableProperty(sourceProperty, 'sham', true);
 	    }
 	    // extend global
 	    redefine(target, key, sourceProperty, options);
@@ -628,10 +629,10 @@
 	};
 
 	var Symbol$1 = global_1.Symbol;
-	var store$1 = shared('wks');
+	var store$2 = shared('wks');
 
 	var wellKnownSymbol = function (name) {
-	  return store$1[name] || (store$1[name] = nativeSymbol && Symbol$1[name]
+	  return store$2[name] || (store$2[name] = nativeSymbol && Symbol$1[name]
 	    || (nativeSymbol ? Symbol$1 : uid)('Symbol.' + name));
 	};
 
@@ -1027,7 +1028,9 @@
 
 	// `Symbol.prototype[@@toPrimitive]` method
 	// https://tc39.github.io/ecma262/#sec-symbol.prototype-@@toprimitive
-	if (!$Symbol[PROTOTYPE$1][TO_PRIMITIVE]) hide($Symbol[PROTOTYPE$1], TO_PRIMITIVE, $Symbol[PROTOTYPE$1].valueOf);
+	if (!$Symbol[PROTOTYPE$1][TO_PRIMITIVE]) {
+	  createNonEnumerableProperty($Symbol[PROTOTYPE$1], TO_PRIMITIVE, $Symbol[PROTOTYPE$1].valueOf);
+	}
 	// `Symbol.prototype[@@toStringTag]` property
 	// https://tc39.github.io/ecma262/#sec-symbol.prototype-@@tostringtag
 	setToStringTag($Symbol, SYMBOL);
@@ -1163,7 +1166,7 @@
 	// Array.prototype[@@unscopables]
 	// https://tc39.github.io/ecma262/#sec-array.prototype-@@unscopables
 	if (ArrayPrototype[UNSCOPABLES] == undefined) {
-	  hide(ArrayPrototype, UNSCOPABLES, objectCreate(null));
+	  createNonEnumerableProperty(ArrayPrototype, UNSCOPABLES, objectCreate(null));
 	}
 
 	// add a key to Array.prototype[@@unscopables]
@@ -1211,6 +1214,29 @@
 	// https://tc39.github.io/ecma262/#sec-array.prototype-@@unscopables
 	addToUnscopables(FIND_INDEX);
 
+	var sloppyArrayMethod = function (METHOD_NAME, argument) {
+	  var method = [][METHOD_NAME];
+	  return !method || !fails(function () {
+	    // eslint-disable-next-line no-useless-call,no-throw-literal
+	    method.call(null, argument || function () { throw 1; }, 1);
+	  });
+	};
+
+	var $forEach$1 = arrayIteration.forEach;
+
+
+	// `Array.prototype.forEach` method implementation
+	// https://tc39.github.io/ecma262/#sec-array.prototype.foreach
+	var arrayForEach = sloppyArrayMethod('forEach') ? function forEach(callbackfn /* , thisArg */) {
+	  return $forEach$1(this, callbackfn, arguments.length > 1 ? arguments[1] : undefined);
+	} : [].forEach;
+
+	// `Array.prototype.forEach` method
+	// https://tc39.github.io/ecma262/#sec-array.prototype.foreach
+	_export({ target: 'Array', proto: true, forced: [].forEach != arrayForEach }, {
+	  forEach: arrayForEach
+	});
+
 	var $includes = arrayIncludes.includes;
 
 
@@ -1224,14 +1250,6 @@
 
 	// https://tc39.github.io/ecma262/#sec-array.prototype-@@unscopables
 	addToUnscopables('includes');
-
-	var sloppyArrayMethod = function (METHOD_NAME, argument) {
-	  var method = [][METHOD_NAME];
-	  return !method || !fails(function () {
-	    // eslint-disable-next-line no-useless-call,no-throw-literal
-	    method.call(null, argument || function () { throw 1; }, 1);
-	  });
-	};
 
 	var $indexOf = arrayIncludes.indexOf;
 
@@ -1250,6 +1268,12 @@
 	      ? nativeIndexOf.apply(this, arguments) || 0
 	      : $indexOf(this, searchElement, arguments.length > 1 ? arguments[1] : undefined);
 	  }
+	});
+
+	// `Array.isArray` method
+	// https://tc39.github.io/ecma262/#sec-array.isarray
+	_export({ target: 'Array', stat: true }, {
+	  isArray: isArray
 	});
 
 	var correctPrototypeGetter = !fails(function () {
@@ -1293,7 +1317,9 @@
 	if (IteratorPrototype == undefined) IteratorPrototype = {};
 
 	// 25.1.2.1.1 %IteratorPrototype%[@@iterator]()
-	if ( !has(IteratorPrototype, ITERATOR)) hide(IteratorPrototype, ITERATOR, returnThis);
+	if ( !has(IteratorPrototype, ITERATOR)) {
+	  createNonEnumerableProperty(IteratorPrototype, ITERATOR, returnThis);
+	}
 
 	var iteratorsCore = {
 	  IteratorPrototype: IteratorPrototype,
@@ -1377,7 +1403,7 @@
 	        if (objectSetPrototypeOf) {
 	          objectSetPrototypeOf(CurrentIteratorPrototype, IteratorPrototype$2);
 	        } else if (typeof CurrentIteratorPrototype[ITERATOR$1] != 'function') {
-	          hide(CurrentIteratorPrototype, ITERATOR$1, returnThis$1);
+	          createNonEnumerableProperty(CurrentIteratorPrototype, ITERATOR$1, returnThis$1);
 	        }
 	      }
 	      // Set @@toStringTag to native iterators
@@ -1393,7 +1419,7 @@
 
 	  // define iterator
 	  if ( IterablePrototype[ITERATOR$1] !== defaultIterator) {
-	    hide(IterablePrototype, ITERATOR$1, defaultIterator);
+	    createNonEnumerableProperty(IterablePrototype, ITERATOR$1, defaultIterator);
 	  }
 
 	  // export additional methods
@@ -1468,6 +1494,20 @@
 	  }
 	});
 
+	var nativeReverse = [].reverse;
+	var test = [1, 2];
+
+	// `Array.prototype.reverse` method
+	// https://tc39.github.io/ecma262/#sec-array.prototype.reverse
+	// fix for Safari 12.0 bug
+	// https://bugs.webkit.org/show_bug.cgi?id=188794
+	_export({ target: 'Array', proto: true, forced: String(test) === String(test.reverse()) }, {
+	  reverse: function reverse() {
+	    if (isArray(this)) this.length = this.length;
+	    return nativeReverse.call(this);
+	  }
+	});
+
 	var SPECIES$2 = wellKnownSymbol('species');
 	var nativeSlice = [].slice;
 	var max$1 = Math.max;
@@ -1504,15 +1544,15 @@
 	});
 
 	var nativeSort = [].sort;
-	var test = [1, 2, 3];
+	var test$1 = [1, 2, 3];
 
 	// IE8-
 	var FAILS_ON_UNDEFINED = fails(function () {
-	  test.sort(undefined);
+	  test$1.sort(undefined);
 	});
 	// V8 bug
 	var FAILS_ON_NULL = fails(function () {
-	  test.sort(null);
+	  test$1.sort(null);
 	});
 	// Old WebKit
 	var SLOPPY_METHOD$2 = sloppyArrayMethod('sort');
@@ -1585,6 +1625,22 @@
 	    return A;
 	  }
 	});
+
+	var DatePrototype = Date.prototype;
+	var INVALID_DATE = 'Invalid Date';
+	var TO_STRING = 'toString';
+	var nativeDateToString = DatePrototype[TO_STRING];
+	var getTime = DatePrototype.getTime;
+
+	// `Date.prototype.toString` method
+	// https://tc39.github.io/ecma262/#sec-date.prototype.tostring
+	if (new Date(NaN) + '' != INVALID_DATE) {
+	  redefine(DatePrototype, TO_STRING, function toString() {
+	    var value = getTime.call(this);
+	    // eslint-disable-next-line no-self-compare
+	    return value === value ? nativeDateToString.call(this) : INVALID_DATE;
+	  });
+	}
 
 	// makes subclassing work correct for wrapped built-ins
 	var inheritIfRequired = function ($this, dummy, Wrapper) {
@@ -1802,15 +1858,15 @@
 	};
 
 	var TO_STRING_TAG$2 = wellKnownSymbol('toStringTag');
-	var test$1 = {};
+	var test$2 = {};
 
-	test$1[TO_STRING_TAG$2] = 'z';
+	test$2[TO_STRING_TAG$2] = 'z';
 
 	// `Object.prototype.toString` method implementation
 	// https://tc39.github.io/ecma262/#sec-object.prototype.tostring
-	var objectToString = String(test$1) !== '[object z]' ? function toString() {
+	var objectToString = String(test$2) !== '[object z]' ? function toString() {
 	  return '[object ' + classof(this) + ']';
-	} : test$1.toString;
+	} : test$2.toString;
 
 	var ObjectPrototype$2 = Object.prototype;
 
@@ -1874,18 +1930,74 @@
 	  return result;
 	};
 
-	var TO_STRING = 'toString';
+	var nativeExec = RegExp.prototype.exec;
+	// This always refers to the native implementation, because the
+	// String#replace polyfill uses ./fix-regexp-well-known-symbol-logic.js,
+	// which loads this file before patching the method.
+	var nativeReplace = String.prototype.replace;
+
+	var patchedExec = nativeExec;
+
+	var UPDATES_LAST_INDEX_WRONG = (function () {
+	  var re1 = /a/;
+	  var re2 = /b*/g;
+	  nativeExec.call(re1, 'a');
+	  nativeExec.call(re2, 'a');
+	  return re1.lastIndex !== 0 || re2.lastIndex !== 0;
+	})();
+
+	// nonparticipating capturing group, copied from es5-shim's String#split patch.
+	var NPCG_INCLUDED = /()??/.exec('')[1] !== undefined;
+
+	var PATCH = UPDATES_LAST_INDEX_WRONG || NPCG_INCLUDED;
+
+	if (PATCH) {
+	  patchedExec = function exec(str) {
+	    var re = this;
+	    var lastIndex, reCopy, match, i;
+
+	    if (NPCG_INCLUDED) {
+	      reCopy = new RegExp('^' + re.source + '$(?!\\s)', regexpFlags.call(re));
+	    }
+	    if (UPDATES_LAST_INDEX_WRONG) lastIndex = re.lastIndex;
+
+	    match = nativeExec.call(re, str);
+
+	    if (UPDATES_LAST_INDEX_WRONG && match) {
+	      re.lastIndex = re.global ? match.index + match[0].length : lastIndex;
+	    }
+	    if (NPCG_INCLUDED && match && match.length > 1) {
+	      // Fix browsers whose `exec` methods don't consistently return `undefined`
+	      // for NPCG, like IE8. NOTE: This doesn' work for /(.?)?/
+	      nativeReplace.call(match[0], reCopy, function () {
+	        for (i = 1; i < arguments.length - 2; i++) {
+	          if (arguments[i] === undefined) match[i] = undefined;
+	        }
+	      });
+	    }
+
+	    return match;
+	  };
+	}
+
+	var regexpExec = patchedExec;
+
+	_export({ target: 'RegExp', proto: true, forced: /./.exec !== regexpExec }, {
+	  exec: regexpExec
+	});
+
+	var TO_STRING$1 = 'toString';
 	var RegExpPrototype = RegExp.prototype;
-	var nativeToString = RegExpPrototype[TO_STRING];
+	var nativeToString = RegExpPrototype[TO_STRING$1];
 
 	var NOT_GENERIC = fails(function () { return nativeToString.call({ source: 'a', flags: 'b' }) != '/a/b'; });
 	// FF44- RegExp#toString has a wrong name
-	var INCORRECT_NAME = nativeToString.name != TO_STRING;
+	var INCORRECT_NAME = nativeToString.name != TO_STRING$1;
 
 	// `RegExp.prototype.toString` method
 	// https://tc39.github.io/ecma262/#sec-regexp.prototype.tostring
 	if (NOT_GENERIC || INCORRECT_NAME) {
-	  redefine(RegExp.prototype, TO_STRING, function toString() {
+	  redefine(RegExp.prototype, TO_STRING$1, function toString() {
 	    var R = anObject(this);
 	    var p = String(R.source);
 	    var rf = R.flags;
@@ -1986,58 +2098,6 @@
 	  return { value: point, done: false };
 	});
 
-	var nativeExec = RegExp.prototype.exec;
-	// This always refers to the native implementation, because the
-	// String#replace polyfill uses ./fix-regexp-well-known-symbol-logic.js,
-	// which loads this file before patching the method.
-	var nativeReplace = String.prototype.replace;
-
-	var patchedExec = nativeExec;
-
-	var UPDATES_LAST_INDEX_WRONG = (function () {
-	  var re1 = /a/;
-	  var re2 = /b*/g;
-	  nativeExec.call(re1, 'a');
-	  nativeExec.call(re2, 'a');
-	  return re1.lastIndex !== 0 || re2.lastIndex !== 0;
-	})();
-
-	// nonparticipating capturing group, copied from es5-shim's String#split patch.
-	var NPCG_INCLUDED = /()??/.exec('')[1] !== undefined;
-
-	var PATCH = UPDATES_LAST_INDEX_WRONG || NPCG_INCLUDED;
-
-	if (PATCH) {
-	  patchedExec = function exec(str) {
-	    var re = this;
-	    var lastIndex, reCopy, match, i;
-
-	    if (NPCG_INCLUDED) {
-	      reCopy = new RegExp('^' + re.source + '$(?!\\s)', regexpFlags.call(re));
-	    }
-	    if (UPDATES_LAST_INDEX_WRONG) lastIndex = re.lastIndex;
-
-	    match = nativeExec.call(re, str);
-
-	    if (UPDATES_LAST_INDEX_WRONG && match) {
-	      re.lastIndex = re.global ? match.index + match[0].length : lastIndex;
-	    }
-	    if (NPCG_INCLUDED && match && match.length > 1) {
-	      // Fix browsers whose `exec` methods don't consistently return `undefined`
-	      // for NPCG, like IE8. NOTE: This doesn' work for /(.?)?/
-	      nativeReplace.call(match[0], reCopy, function () {
-	        for (i = 1; i < arguments.length - 2; i++) {
-	          if (arguments[i] === undefined) match[i] = undefined;
-	        }
-	      });
-	    }
-
-	    return match;
-	  };
-	}
-
-	var regexpExec = patchedExec;
-
 	var SPECIES$3 = wellKnownSymbol('species');
 
 	var REPLACE_SUPPORTS_NAMED_GROUPS = !fails(function () {
@@ -2121,7 +2181,7 @@
 	      // 21.2.5.9 RegExp.prototype[@@search](string)
 	      : function (string) { return regexMethod.call(string, this); }
 	    );
-	    if (sham) hide(RegExp.prototype[SYMBOL], 'sham', true);
+	    if (sham) createNonEnumerableProperty(RegExp.prototype[SYMBOL], 'sham', true);
 	  }
 	};
 
@@ -2494,21 +2554,12 @@
 	  TouchList: 0
 	};
 
-	var $forEach$1 = arrayIteration.forEach;
-
-
-	// `Array.prototype.forEach` method implementation
-	// https://tc39.github.io/ecma262/#sec-array.prototype.foreach
-	var arrayForEach = sloppyArrayMethod('forEach') ? function forEach(callbackfn /* , thisArg */) {
-	  return $forEach$1(this, callbackfn, arguments.length > 1 ? arguments[1] : undefined);
-	} : [].forEach;
-
 	for (var COLLECTION_NAME in domIterables) {
 	  var Collection = global_1[COLLECTION_NAME];
 	  var CollectionPrototype = Collection && Collection.prototype;
 	  // some Chrome versions have non-configurable methods on DOMTokenList
 	  if (CollectionPrototype && CollectionPrototype.forEach !== arrayForEach) try {
-	    hide(CollectionPrototype, 'forEach', arrayForEach);
+	    createNonEnumerableProperty(CollectionPrototype, 'forEach', arrayForEach);
 	  } catch (error) {
 	    CollectionPrototype.forEach = arrayForEach;
 	  }
@@ -2524,15 +2575,17 @@
 	  if (CollectionPrototype$1) {
 	    // some Chrome versions have non-configurable methods on DOMTokenList
 	    if (CollectionPrototype$1[ITERATOR$2] !== ArrayValues) try {
-	      hide(CollectionPrototype$1, ITERATOR$2, ArrayValues);
+	      createNonEnumerableProperty(CollectionPrototype$1, ITERATOR$2, ArrayValues);
 	    } catch (error) {
 	      CollectionPrototype$1[ITERATOR$2] = ArrayValues;
 	    }
-	    if (!CollectionPrototype$1[TO_STRING_TAG$3]) hide(CollectionPrototype$1, TO_STRING_TAG$3, COLLECTION_NAME$1);
+	    if (!CollectionPrototype$1[TO_STRING_TAG$3]) {
+	      createNonEnumerableProperty(CollectionPrototype$1, TO_STRING_TAG$3, COLLECTION_NAME$1);
+	    }
 	    if (domIterables[COLLECTION_NAME$1]) for (var METHOD_NAME in es_array_iterator) {
 	      // some Chrome versions have non-configurable methods on DOMTokenList
 	      if (CollectionPrototype$1[METHOD_NAME] !== es_array_iterator[METHOD_NAME]) try {
-	        hide(CollectionPrototype$1, METHOD_NAME, es_array_iterator[METHOD_NAME]);
+	        createNonEnumerableProperty(CollectionPrototype$1, METHOD_NAME, es_array_iterator[METHOD_NAME]);
 	      } catch (error) {
 	        CollectionPrototype$1[METHOD_NAME] = es_array_iterator[METHOD_NAME];
 	      }
@@ -2540,99 +2593,32 @@
 	  }
 	}
 
-	function _typeof(obj) {
-	  if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") {
-	    _typeof = function (obj) {
-	      return typeof obj;
-	    };
-	  } else {
-	    _typeof = function (obj) {
-	      return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
-	    };
-	  }
+	var userAgent = getBuiltIn('navigator', 'userAgent') || '';
 
-	  return _typeof(obj);
-	}
+	var slice = [].slice;
+	var MSIE = /MSIE .\./.test(userAgent); // <- dirty ie9- check
 
-	function _classCallCheck(instance, Constructor) {
-	  if (!(instance instanceof Constructor)) {
-	    throw new TypeError("Cannot call a class as a function");
-	  }
-	}
+	var wrap$1 = function (scheduler) {
+	  return function (handler, timeout /* , ...arguments */) {
+	    var boundArgs = arguments.length > 2;
+	    var args = boundArgs ? slice.call(arguments, 2) : undefined;
+	    return scheduler(boundArgs ? function () {
+	      // eslint-disable-next-line no-new-func
+	      (typeof handler == 'function' ? handler : Function(handler)).apply(this, args);
+	    } : handler, timeout);
+	  };
+	};
 
-	function _defineProperties(target, props) {
-	  for (var i = 0; i < props.length; i++) {
-	    var descriptor = props[i];
-	    descriptor.enumerable = descriptor.enumerable || false;
-	    descriptor.configurable = true;
-	    if ("value" in descriptor) descriptor.writable = true;
-	    Object.defineProperty(target, descriptor.key, descriptor);
-	  }
-	}
-
-	function _createClass(Constructor, protoProps, staticProps) {
-	  if (protoProps) _defineProperties(Constructor.prototype, protoProps);
-	  if (staticProps) _defineProperties(Constructor, staticProps);
-	  return Constructor;
-	}
-
-	function _slicedToArray(arr, i) {
-	  return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest();
-	}
-
-	function _toConsumableArray(arr) {
-	  return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _nonIterableSpread();
-	}
-
-	function _arrayWithoutHoles(arr) {
-	  if (Array.isArray(arr)) {
-	    for (var i = 0, arr2 = new Array(arr.length); i < arr.length; i++) arr2[i] = arr[i];
-
-	    return arr2;
-	  }
-	}
-
-	function _arrayWithHoles(arr) {
-	  if (Array.isArray(arr)) return arr;
-	}
-
-	function _iterableToArray(iter) {
-	  if (Symbol.iterator in Object(iter) || Object.prototype.toString.call(iter) === "[object Arguments]") return Array.from(iter);
-	}
-
-	function _iterableToArrayLimit(arr, i) {
-	  var _arr = [];
-	  var _n = true;
-	  var _d = false;
-	  var _e = undefined;
-
-	  try {
-	    for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) {
-	      _arr.push(_s.value);
-
-	      if (i && _arr.length === i) break;
-	    }
-	  } catch (err) {
-	    _d = true;
-	    _e = err;
-	  } finally {
-	    try {
-	      if (!_n && _i["return"] != null) _i["return"]();
-	    } finally {
-	      if (_d) throw _e;
-	    }
-	  }
-
-	  return _arr;
-	}
-
-	function _nonIterableSpread() {
-	  throw new TypeError("Invalid attempt to spread non-iterable instance");
-	}
-
-	function _nonIterableRest() {
-	  throw new TypeError("Invalid attempt to destructure non-iterable instance");
-	}
+	// ie9- setTimeout & setInterval additional parameters fix
+	// https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#timers
+	_export({ global: true, bind: true, forced: MSIE }, {
+	  // `setTimeout` method
+	  // https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#dom-settimeout
+	  setTimeout: wrap$1(global_1.setTimeout),
+	  // `setInterval` method
+	  // https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#dom-setinterval
+	  setInterval: wrap$1(global_1.setInterval)
+	});
 
 	var VERSION = '1.15.5';
 	var bootstrapVersion = 4;
@@ -2961,26 +2947,26 @@
 	    return 'Loading, please wait';
 	  },
 	  formatRecordsPerPage: function formatRecordsPerPage(pageNumber) {
-	    return "".concat(pageNumber, " rows per page");
+	    return pageNumber + " rows per page";
 	  },
 	  formatShowingRows: function formatShowingRows(pageFrom, pageTo, totalRows, totalNotFiltered) {
 	    if (totalNotFiltered !== undefined && totalNotFiltered > 0 && totalNotFiltered > totalRows) {
-	      return "Showing ".concat(pageFrom, " to ").concat(pageTo, " of ").concat(totalRows, " rows (filtered from ").concat(totalNotFiltered, " total rows)");
+	      return "Showing " + pageFrom + " to " + pageTo + " of " + totalRows + " rows (filtered from " + totalNotFiltered + " total rows)";
 	    }
 
-	    return "Showing ".concat(pageFrom, " to ").concat(pageTo, " of ").concat(totalRows, " rows");
+	    return "Showing " + pageFrom + " to " + pageTo + " of " + totalRows + " rows";
 	  },
 	  formatSRPaginationPreText: function formatSRPaginationPreText() {
 	    return 'previous page';
 	  },
 	  formatSRPaginationPageText: function formatSRPaginationPageText(page) {
-	    return "to page ".concat(page);
+	    return "to page " + page;
 	  },
 	  formatSRPaginationNextText: function formatSRPaginationNextText() {
 	    return 'next page';
 	  },
 	  formatDetailPagination: function formatDetailPagination(totalRows) {
-	    return "Showing ".concat(totalRows, " rows");
+	    return "Showing " + totalRows + " rows";
 	  },
 	  formatSearch: function formatSearch() {
 	    return 'Search';
@@ -3098,7 +3084,7 @@
 	Object.assign(DEFAULTS, EN);
 	var Constants = {
 	  VERSION: VERSION,
-	  THEME: "bootstrap".concat(bootstrapVersion),
+	  THEME: "bootstrap" + bootstrapVersion,
 	  CONSTANTS: CONSTANTS,
 	  DEFAULTS: DEFAULTS,
 	  COLUMN_DEFAULTS: COLUMN_DEFAULTS,
@@ -3190,38 +3176,33 @@
 
 	    return flag ? str : '';
 	  },
-	  isEmptyObject: function isEmptyObject() {
-	    var obj = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+	  isEmptyObject: function isEmptyObject(obj) {
+	    if (obj === void 0) {
+	      obj = {};
+	    }
+
 	    return Object.entries(obj).length === 0 && obj.constructor === Object;
 	  },
 	  isNumeric: function isNumeric(n) {
 	    return !isNaN(parseFloat(n)) && isFinite(n);
 	  },
 	  getFieldTitle: function getFieldTitle(list, value) {
-	    var _iteratorNormalCompletion = true;
-	    var _didIteratorError = false;
-	    var _iteratorError = undefined;
+	    for (var _iterator = list, _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _iterator[Symbol.iterator]();;) {
+	      var _ref;
 
-	    try {
-	      for (var _iterator = list[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-	        var item = _step.value;
-
-	        if (item.field === value) {
-	          return item.title;
-	        }
+	      if (_isArray) {
+	        if (_i >= _iterator.length) break;
+	        _ref = _iterator[_i++];
+	      } else {
+	        _i = _iterator.next();
+	        if (_i.done) break;
+	        _ref = _i.value;
 	      }
-	    } catch (err) {
-	      _didIteratorError = true;
-	      _iteratorError = err;
-	    } finally {
-	      try {
-	        if (!_iteratorNormalCompletion && _iterator.return != null) {
-	          _iterator.return();
-	        }
-	      } finally {
-	        if (_didIteratorError) {
-	          throw _iteratorError;
-	        }
+
+	      var item = _ref;
+
+	      if (item.field === value) {
+	        return item.title;
 	      }
 	    }
 
@@ -3230,28 +3211,21 @@
 	  setFieldIndex: function setFieldIndex(columns) {
 	    var totalCol = 0;
 	    var flag = [];
-	    var _iteratorNormalCompletion2 = true;
-	    var _didIteratorError2 = false;
-	    var _iteratorError2 = undefined;
 
-	    try {
-	      for (var _iterator2 = columns[0][Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-	        var column = _step2.value;
-	        totalCol += column.colspan || 1;
+	    for (var _iterator2 = columns[0], _isArray2 = Array.isArray(_iterator2), _i2 = 0, _iterator2 = _isArray2 ? _iterator2 : _iterator2[Symbol.iterator]();;) {
+	      var _ref2;
+
+	      if (_isArray2) {
+	        if (_i2 >= _iterator2.length) break;
+	        _ref2 = _iterator2[_i2++];
+	      } else {
+	        _i2 = _iterator2.next();
+	        if (_i2.done) break;
+	        _ref2 = _i2.value;
 	      }
-	    } catch (err) {
-	      _didIteratorError2 = true;
-	      _iteratorError2 = err;
-	    } finally {
-	      try {
-	        if (!_iteratorNormalCompletion2 && _iterator2.return != null) {
-	          _iterator2.return();
-	        }
-	      } finally {
-	        if (_didIteratorError2) {
-	          throw _iteratorError2;
-	        }
-	      }
+
+	      var column = _ref2;
+	      totalCol += column.colspan || 1;
 	    }
 
 	    for (var i = 0; i < columns.length; i++) {
@@ -3262,119 +3236,97 @@
 	      }
 	    }
 
-	    for (var _i = 0; _i < columns.length; _i++) {
-	      var _iteratorNormalCompletion3 = true;
-	      var _didIteratorError3 = false;
-	      var _iteratorError3 = undefined;
+	    for (var _i3 = 0; _i3 < columns.length; _i3++) {
+	      for (var _iterator3 = columns[_i3], _isArray3 = Array.isArray(_iterator3), _i4 = 0, _iterator3 = _isArray3 ? _iterator3 : _iterator3[Symbol.iterator]();;) {
+	        var _ref3;
 
-	      try {
-	        for (var _iterator3 = columns[_i][Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-	          var r = _step3.value;
-	          var rowspan = r.rowspan || 1;
-	          var colspan = r.colspan || 1;
-
-	          var index = flag[_i].indexOf(false);
-
-	          r.colspanIndex = index;
-
-	          if (colspan === 1) {
-	            r.fieldIndex = index; // when field is undefined, use index instead
-
-	            if (typeof r.field === 'undefined') {
-	              r.field = index;
-	            }
-	          } else {
-	            r.colspanGroup = r.colspan;
-	          }
-
-	          for (var k = 0; k < rowspan; k++) {
-	            flag[_i + k][index] = true;
-	          }
-
-	          for (var _k = 0; _k < colspan; _k++) {
-	            flag[_i][index + _k] = true;
-	          }
+	        if (_isArray3) {
+	          if (_i4 >= _iterator3.length) break;
+	          _ref3 = _iterator3[_i4++];
+	        } else {
+	          _i4 = _iterator3.next();
+	          if (_i4.done) break;
+	          _ref3 = _i4.value;
 	        }
-	      } catch (err) {
-	        _didIteratorError3 = true;
-	        _iteratorError3 = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion3 && _iterator3.return != null) {
-	            _iterator3.return();
+
+	        var r = _ref3;
+	        var rowspan = r.rowspan || 1;
+	        var colspan = r.colspan || 1;
+
+	        var index = flag[_i3].indexOf(false);
+
+	        r.colspanIndex = index;
+
+	        if (colspan === 1) {
+	          r.fieldIndex = index; // when field is undefined, use index instead
+
+	          if (typeof r.field === 'undefined') {
+	            r.field = index;
 	          }
-	        } finally {
-	          if (_didIteratorError3) {
-	            throw _iteratorError3;
-	          }
+	        } else {
+	          r.colspanGroup = r.colspan;
+	        }
+
+	        for (var k = 0; k < rowspan; k++) {
+	          flag[_i3 + k][index] = true;
+	        }
+
+	        for (var _k = 0; _k < colspan; _k++) {
+	          flag[_i3][index + _k] = true;
 	        }
 	      }
 	    }
 	  },
 	  updateFieldGroup: function updateFieldGroup(columns) {
 	    var allColumns = columns.flat();
-	    var _iteratorNormalCompletion4 = true;
-	    var _didIteratorError4 = false;
-	    var _iteratorError4 = undefined;
 
-	    try {
-	      for (var _iterator4 = columns[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-	        var c = _step4.value;
-	        var _iteratorNormalCompletion5 = true;
-	        var _didIteratorError5 = false;
-	        var _iteratorError5 = undefined;
+	    for (var _iterator4 = columns, _isArray4 = Array.isArray(_iterator4), _i5 = 0, _iterator4 = _isArray4 ? _iterator4 : _iterator4[Symbol.iterator]();;) {
+	      var _ref4;
 
-	        try {
-	          for (var _iterator5 = c[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
-	            var r = _step5.value;
-
-	            if (r.colspanGroup > 1) {
-	              var colspan = 0;
-
-	              var _loop = function _loop(i) {
-	                var column = allColumns.find(function (col) {
-	                  return col.fieldIndex === i;
-	                });
-
-	                if (column.visible) {
-	                  colspan++;
-	                }
-	              };
-
-	              for (var i = r.colspanIndex; i < r.colspanIndex + r.colspanGroup; i++) {
-	                _loop(i);
-	              }
-
-	              r.colspan = colspan;
-	              r.visible = colspan > 0;
-	            }
-	          }
-	        } catch (err) {
-	          _didIteratorError5 = true;
-	          _iteratorError5 = err;
-	        } finally {
-	          try {
-	            if (!_iteratorNormalCompletion5 && _iterator5.return != null) {
-	              _iterator5.return();
-	            }
-	          } finally {
-	            if (_didIteratorError5) {
-	              throw _iteratorError5;
-	            }
-	          }
-	        }
+	      if (_isArray4) {
+	        if (_i5 >= _iterator4.length) break;
+	        _ref4 = _iterator4[_i5++];
+	      } else {
+	        _i5 = _iterator4.next();
+	        if (_i5.done) break;
+	        _ref4 = _i5.value;
 	      }
-	    } catch (err) {
-	      _didIteratorError4 = true;
-	      _iteratorError4 = err;
-	    } finally {
-	      try {
-	        if (!_iteratorNormalCompletion4 && _iterator4.return != null) {
-	          _iterator4.return();
+
+	      var c = _ref4;
+
+	      for (var _iterator5 = c, _isArray5 = Array.isArray(_iterator5), _i6 = 0, _iterator5 = _isArray5 ? _iterator5 : _iterator5[Symbol.iterator]();;) {
+	        var _ref5;
+
+	        if (_isArray5) {
+	          if (_i6 >= _iterator5.length) break;
+	          _ref5 = _iterator5[_i6++];
+	        } else {
+	          _i6 = _iterator5.next();
+	          if (_i6.done) break;
+	          _ref5 = _i6.value;
 	        }
-	      } finally {
-	        if (_didIteratorError4) {
-	          throw _iteratorError4;
+
+	        var r = _ref5;
+
+	        if (r.colspanGroup > 1) {
+	          var colspan = 0;
+
+	          var _loop = function _loop(i) {
+	            var column = allColumns.find(function (col) {
+	              return col.fieldIndex === i;
+	            });
+
+	            if (column.visible) {
+	              colspan++;
+	            }
+	          };
+
+	          for (var i = r.colspanIndex; i < r.colspanIndex + r.colspanGroup; i++) {
+	            _loop(i);
+	          }
+
+	          r.colspan = colspan;
+	          r.visible = colspan > 0;
 	        }
 	      }
 	    }
@@ -3408,35 +3360,28 @@
 
 	      if (names.length > 1) {
 	        func = window;
-	        var _iteratorNormalCompletion6 = true;
-	        var _didIteratorError6 = false;
-	        var _iteratorError6 = undefined;
 
-	        try {
-	          for (var _iterator6 = names[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
-	            var f = _step6.value;
-	            func = func[f];
+	        for (var _iterator6 = names, _isArray6 = Array.isArray(_iterator6), _i7 = 0, _iterator6 = _isArray6 ? _iterator6 : _iterator6[Symbol.iterator]();;) {
+	          var _ref6;
+
+	          if (_isArray6) {
+	            if (_i7 >= _iterator6.length) break;
+	            _ref6 = _iterator6[_i7++];
+	          } else {
+	            _i7 = _iterator6.next();
+	            if (_i7.done) break;
+	            _ref6 = _i7.value;
 	          }
-	        } catch (err) {
-	          _didIteratorError6 = true;
-	          _iteratorError6 = err;
-	        } finally {
-	          try {
-	            if (!_iteratorNormalCompletion6 && _iterator6.return != null) {
-	              _iterator6.return();
-	            }
-	          } finally {
-	            if (_didIteratorError6) {
-	              throw _iteratorError6;
-	            }
-	          }
+
+	          var f = _ref6;
+	          func = func[f];
 	        }
 	      } else {
 	        func = window[name];
 	      }
 	    }
 
-	    if (func !== null && _typeof(func) === 'object') {
+	    if (func !== null && typeof func === 'object') {
 	      return func;
 	    }
 
@@ -3444,8 +3389,8 @@
 	      return func.apply(self, args || []);
 	    }
 
-	    if (!func && typeof name === 'string' && this.sprintf.apply(this, [name].concat(_toConsumableArray(args)))) {
-	      return this.sprintf.apply(this, [name].concat(_toConsumableArray(args)));
+	    if (!func && typeof name === 'string' && this.sprintf.apply(this, [name].concat(args))) {
+	      return this.sprintf.apply(this, [name].concat(args));
 	    }
 
 	    return defaultValue;
@@ -3458,8 +3403,8 @@
 	      return false;
 	    }
 
-	    for (var _i2 = 0, _aKeys = aKeys; _i2 < _aKeys.length; _i2++) {
-	      var key = _aKeys[_i2];
+	    for (var _i8 = 0, _aKeys = aKeys; _i8 < _aKeys.length; _i8++) {
+	      var key = _aKeys[_i8];
 
 	      if (bKeys.includes(key) && objectA[key] !== objectB[key]) {
 	        return false;
@@ -3476,11 +3421,10 @@
 	    return text;
 	  },
 	  getRealDataAttr: function getRealDataAttr(dataAttr) {
-	    for (var _i3 = 0, _Object$entries = Object.entries(dataAttr); _i3 < _Object$entries.length; _i3++) {
-	      var _Object$entries$_i = _slicedToArray(_Object$entries[_i3], 2),
+	    for (var _i9 = 0, _Object$entries = Object.entries(dataAttr); _i9 < _Object$entries.length; _i9++) {
+	      var _Object$entries$_i = _Object$entries[_i9],
 	          attr = _Object$entries$_i[0],
 	          value = _Object$entries$_i[1];
-
 	      var auxAttr = attr.split(/(?=[A-Z])/).join('-').toLowerCase();
 
 	      if (auxAttr !== attr) {
@@ -3499,28 +3443,21 @@
 	    }
 
 	    var props = field.split('.');
-	    var _iteratorNormalCompletion7 = true;
-	    var _didIteratorError7 = false;
-	    var _iteratorError7 = undefined;
 
-	    try {
-	      for (var _iterator7 = props[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
-	        var p = _step7.value;
-	        value = value && value[p];
+	    for (var _iterator7 = props, _isArray7 = Array.isArray(_iterator7), _i10 = 0, _iterator7 = _isArray7 ? _iterator7 : _iterator7[Symbol.iterator]();;) {
+	      var _ref7;
+
+	      if (_isArray7) {
+	        if (_i10 >= _iterator7.length) break;
+	        _ref7 = _iterator7[_i10++];
+	      } else {
+	        _i10 = _iterator7.next();
+	        if (_i10.done) break;
+	        _ref7 = _i10.value;
 	      }
-	    } catch (err) {
-	      _didIteratorError7 = true;
-	      _iteratorError7 = err;
-	    } finally {
-	      try {
-	        if (!_iteratorNormalCompletion7 && _iterator7.return != null) {
-	          _iterator7.return();
-	        }
-	      } finally {
-	        if (_didIteratorError7) {
-	          throw _iteratorError7;
-	        }
-	      }
+
+	      var p = _ref7;
+	      value = value && value[p];
 	    }
 
 	    return escape ? this.escapeHTML(value) : value;
@@ -3529,30 +3466,22 @@
 	    return navigator.userAgent.includes('MSIE ') || /Trident.*rv:11\./.test(navigator.userAgent);
 	  },
 	  findIndex: function findIndex(items, item) {
-	    var _iteratorNormalCompletion8 = true;
-	    var _didIteratorError8 = false;
-	    var _iteratorError8 = undefined;
+	    for (var _iterator8 = items, _isArray8 = Array.isArray(_iterator8), _i11 = 0, _iterator8 = _isArray8 ? _iterator8 : _iterator8[Symbol.iterator]();;) {
+	      var _ref8;
 
-	    try {
-	      for (var _iterator8 = items[Symbol.iterator](), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
-	        var it = _step8.value;
-
-	        if (JSON.stringify(it) === JSON.stringify(item)) {
-	          return items.indexOf(it);
-	        }
+	      if (_isArray8) {
+	        if (_i11 >= _iterator8.length) break;
+	        _ref8 = _iterator8[_i11++];
+	      } else {
+	        _i11 = _iterator8.next();
+	        if (_i11.done) break;
+	        _ref8 = _i11.value;
 	      }
-	    } catch (err) {
-	      _didIteratorError8 = true;
-	      _iteratorError8 = err;
-	    } finally {
-	      try {
-	        if (!_iteratorNormalCompletion8 && _iterator8.return != null) {
-	          _iterator8.return();
-	        }
-	      } finally {
-	        if (_didIteratorError8) {
-	          throw _iteratorError8;
-	        }
+
+	      var it = _ref8;
+
+	      if (JSON.stringify(it) === JSON.stringify(item)) {
+	        return items.indexOf(it);
 	      }
 	    }
 
@@ -3592,12 +3521,12 @@
 	        var field = columns[x].field;
 	        row[field] = $(el).html().trim(); // save td's id, class and data-* attributes
 
-	        row["_".concat(field, "_id")] = $(el).attr('id');
-	        row["_".concat(field, "_class")] = $(el).attr('class');
-	        row["_".concat(field, "_rowspan")] = $(el).attr('rowspan');
-	        row["_".concat(field, "_colspan")] = $(el).attr('colspan');
-	        row["_".concat(field, "_title")] = $(el).attr('title');
-	        row["_".concat(field, "_data")] = _this.getRealDataAttr($(el).data());
+	        row["_" + field + "_id"] = $(el).attr('id');
+	        row["_" + field + "_class"] = $(el).attr('class');
+	        row["_" + field + "_rowspan"] = $(el).attr('rowspan');
+	        row["_" + field + "_colspan"] = $(el).attr('colspan');
+	        row["_" + field + "_title"] = $(el).attr('title');
+	        row["_" + field + "_data"] = _this.getRealDataAttr($(el).data());
 	      });
 	      data.push(row);
 	    });
@@ -3660,8 +3589,6 @@
 	  function VirtualScroll(options) {
 	    var _this = this;
 
-	    _classCallCheck(this, VirtualScroll);
-
 	    this.rows = options.rows;
 	    this.scrollEl = options.scrollEl;
 	    this.contentEl = options.contentEl;
@@ -3690,115 +3617,109 @@
 	    };
 	  }
 
-	  _createClass(VirtualScroll, [{
-	    key: "initDOM",
-	    value: function initDOM(rows, fixedScroll) {
-	      if (typeof this.clusterHeight === 'undefined') {
-	        this.cache.scrollTop = this.scrollEl.scrollTop;
-	        this.cache.data = this.contentEl.innerHTML = rows[0] + rows[0] + rows[0];
-	        this.getRowsHeight(rows);
-	      }
+	  var _proto = VirtualScroll.prototype;
 
-	      var data = this.initData(rows, this.getNum(fixedScroll));
-	      var thisRows = data.rows.join('');
-	      var dataChanged = this.checkChanges('data', thisRows);
-	      var topOffsetChanged = this.checkChanges('top', data.topOffset);
-	      var bottomOffsetChanged = this.checkChanges('bottom', data.bottomOffset);
-	      var html = [];
-
-	      if (dataChanged && topOffsetChanged) {
-	        if (data.topOffset) {
-	          html.push(this.getExtra('top', data.topOffset));
-	        }
-
-	        html.push(thisRows);
-
-	        if (data.bottomOffset) {
-	          html.push(this.getExtra('bottom', data.bottomOffset));
-	        }
-
-	        this.contentEl.innerHTML = html.join('');
-
-	        if (fixedScroll) {
-	          this.contentEl.scrollTop = this.cache.scrollTop;
-	        }
-	      } else if (bottomOffsetChanged) {
-	        this.contentEl.lastChild.style.height = "".concat(data.bottomOffset, "px");
-	      }
+	  _proto.initDOM = function initDOM(rows, fixedScroll) {
+	    if (typeof this.clusterHeight === 'undefined') {
+	      this.cache.scrollTop = this.scrollEl.scrollTop;
+	      this.cache.data = this.contentEl.innerHTML = rows[0] + rows[0] + rows[0];
+	      this.getRowsHeight(rows);
 	    }
-	  }, {
-	    key: "getRowsHeight",
-	    value: function getRowsHeight() {
-	      if (typeof this.itemHeight === 'undefined') {
-	        var nodes = this.contentEl.children;
-	        var node = nodes[Math.floor(nodes.length / 2)];
-	        this.itemHeight = node.offsetHeight;
+
+	    var data = this.initData(rows, this.getNum(fixedScroll));
+	    var thisRows = data.rows.join('');
+	    var dataChanged = this.checkChanges('data', thisRows);
+	    var topOffsetChanged = this.checkChanges('top', data.topOffset);
+	    var bottomOffsetChanged = this.checkChanges('bottom', data.bottomOffset);
+	    var html = [];
+
+	    if (dataChanged && topOffsetChanged) {
+	      if (data.topOffset) {
+	        html.push(this.getExtra('top', data.topOffset));
 	      }
 
-	      this.blockHeight = this.itemHeight * BLOCK_ROWS;
-	      this.clusterRows = BLOCK_ROWS * CLUSTER_BLOCKS;
-	      this.clusterHeight = this.blockHeight * CLUSTER_BLOCKS;
+	      html.push(thisRows);
+
+	      if (data.bottomOffset) {
+	        html.push(this.getExtra('bottom', data.bottomOffset));
+	      }
+
+	      this.contentEl.innerHTML = html.join('');
+
+	      if (fixedScroll) {
+	        this.contentEl.scrollTop = this.cache.scrollTop;
+	      }
+	    } else if (bottomOffsetChanged) {
+	      this.contentEl.lastChild.style.height = data.bottomOffset + "px";
 	    }
-	  }, {
-	    key: "getNum",
-	    value: function getNum(fixedScroll) {
-	      this.scrollTop = fixedScroll ? this.cache.scrollTop : this.scrollEl.scrollTop;
-	      return Math.floor(this.scrollTop / (this.clusterHeight - this.blockHeight)) || 0;
+	  };
+
+	  _proto.getRowsHeight = function getRowsHeight() {
+	    if (typeof this.itemHeight === 'undefined') {
+	      var nodes = this.contentEl.children;
+	      var node = nodes[Math.floor(nodes.length / 2)];
+	      this.itemHeight = node.offsetHeight;
 	    }
-	  }, {
-	    key: "initData",
-	    value: function initData(rows, num) {
-	      if (rows.length < BLOCK_ROWS) {
-	        return {
-	          topOffset: 0,
-	          bottomOffset: 0,
-	          rowsAbove: 0,
-	          rows: rows
-	        };
-	      }
 
-	      var start = Math.max((this.clusterRows - BLOCK_ROWS) * num, 0);
-	      var end = start + this.clusterRows;
-	      var topOffset = Math.max(start * this.itemHeight, 0);
-	      var bottomOffset = Math.max((rows.length - end) * this.itemHeight, 0);
-	      var thisRows = [];
-	      var rowsAbove = start;
+	    this.blockHeight = this.itemHeight * BLOCK_ROWS;
+	    this.clusterRows = BLOCK_ROWS * CLUSTER_BLOCKS;
+	    this.clusterHeight = this.blockHeight * CLUSTER_BLOCKS;
+	  };
 
-	      if (topOffset < 1) {
-	        rowsAbove++;
-	      }
+	  _proto.getNum = function getNum(fixedScroll) {
+	    this.scrollTop = fixedScroll ? this.cache.scrollTop : this.scrollEl.scrollTop;
+	    return Math.floor(this.scrollTop / (this.clusterHeight - this.blockHeight)) || 0;
+	  };
 
-	      for (var i = start; i < end; i++) {
-	        rows[i] && thisRows.push(rows[i]);
-	      }
-
+	  _proto.initData = function initData(rows, num) {
+	    if (rows.length < BLOCK_ROWS) {
 	      return {
-	        topOffset: topOffset,
-	        bottomOffset: bottomOffset,
-	        rowsAbove: rowsAbove,
-	        rows: thisRows
+	        topOffset: 0,
+	        bottomOffset: 0,
+	        rowsAbove: 0,
+	        rows: rows
 	      };
 	    }
-	  }, {
-	    key: "checkChanges",
-	    value: function checkChanges(type, value) {
-	      var changed = value !== this.cache[type];
-	      this.cache[type] = value;
-	      return changed;
-	    }
-	  }, {
-	    key: "getExtra",
-	    value: function getExtra(className, height) {
-	      var tag = document.createElement('tr');
-	      tag.className = "virtual-scroll-".concat(className);
 
-	      if (height) {
-	        tag.style.height = "".concat(height, "px");
-	      }
+	    var start = Math.max((this.clusterRows - BLOCK_ROWS) * num, 0);
+	    var end = start + this.clusterRows;
+	    var topOffset = Math.max(start * this.itemHeight, 0);
+	    var bottomOffset = Math.max((rows.length - end) * this.itemHeight, 0);
+	    var thisRows = [];
+	    var rowsAbove = start;
 
-	      return tag.outerHTML;
+	    if (topOffset < 1) {
+	      rowsAbove++;
 	    }
-	  }]);
+
+	    for (var i = start; i < end; i++) {
+	      rows[i] && thisRows.push(rows[i]);
+	    }
+
+	    return {
+	      topOffset: topOffset,
+	      bottomOffset: bottomOffset,
+	      rowsAbove: rowsAbove,
+	      rows: thisRows
+	    };
+	  };
+
+	  _proto.checkChanges = function checkChanges(type, value) {
+	    var changed = value !== this.cache[type];
+	    this.cache[type] = value;
+	    return changed;
+	  };
+
+	  _proto.getExtra = function getExtra(className, height) {
+	    var tag = document.createElement('tr');
+	    tag.className = "virtual-scroll-" + className;
+
+	    if (height) {
+	      tag.style.height = height + "px";
+	    }
+
+	    return tag.outerHTML;
+	  };
 
 	  return VirtualScroll;
 	}();
@@ -3807,8 +3728,6 @@
 	/*#__PURE__*/
 	function () {
 	  function BootstrapTable(el, options) {
-	    _classCallCheck(this, BootstrapTable);
-
 	    this.options = options;
 	    this.$el = $(el);
 	    this.$el_ = this.$el.clone();
@@ -3817,3079 +3736,2930 @@
 	    this.init();
 	  }
 
-	  _createClass(BootstrapTable, [{
-	    key: "init",
-	    value: function init() {
-	      this.initConstants();
-	      this.initLocale();
-	      this.initContainer();
-	      this.initTable();
-	      this.initHeader();
-	      this.initData();
-	      this.initHiddenRows();
-	      this.initToolbar();
-	      this.initPagination();
-	      this.initBody();
-	      this.initSearchText();
-	      this.initServer();
-	    }
-	  }, {
-	    key: "initConstants",
-	    value: function initConstants() {
-	      var o = this.options;
-	      this.constants = Constants.CONSTANTS;
-	      this.constants.theme = $.fn.bootstrapTable.theme;
-	      var buttonsPrefix = o.buttonsPrefix ? "".concat(o.buttonsPrefix, "-") : '';
-	      this.constants.buttonsClass = [o.buttonsPrefix, buttonsPrefix + o.buttonsClass, Utils.sprintf("".concat(buttonsPrefix, "%s"), o.iconSize)].join(' ').trim();
-	    }
-	  }, {
-	    key: "initLocale",
-	    value: function initLocale() {
-	      if (this.options.locale) {
-	        var locales = $.fn.bootstrapTable.locales;
-	        var parts = this.options.locale.split(/-|_/);
-	        parts[0] = parts[0].toLowerCase();
+	  var _proto = BootstrapTable.prototype;
 
-	        if (parts[1]) {
-	          parts[1] = parts[1].toUpperCase();
-	        }
+	  _proto.init = function init() {
+	    this.initConstants();
+	    this.initLocale();
+	    this.initContainer();
+	    this.initTable();
+	    this.initHeader();
+	    this.initData();
+	    this.initHiddenRows();
+	    this.initToolbar();
+	    this.initPagination();
+	    this.initBody();
+	    this.initSearchText();
+	    this.initServer();
+	  };
 
-	        if (locales[this.options.locale]) {
-	          $.extend(this.options, locales[this.options.locale]);
-	        } else if (locales[parts.join('-')]) {
-	          $.extend(this.options, locales[parts.join('-')]);
-	        } else if (locales[parts[0]]) {
-	          $.extend(this.options, locales[parts[0]]);
-	        }
-	      }
-	    }
-	  }, {
-	    key: "initContainer",
-	    value: function initContainer() {
-	      var topPagination = ['top', 'both'].includes(this.options.paginationVAlign) ? '<div class="fixed-table-pagination clearfix"></div>' : '';
-	      var bottomPagination = ['bottom', 'both'].includes(this.options.paginationVAlign) ? '<div class="fixed-table-pagination"></div>' : '';
-	      this.$container = $("\n      <div class=\"bootstrap-table ".concat(this.constants.theme, "\">\n      <div class=\"fixed-table-toolbar\"></div>\n      ").concat(topPagination, "\n      <div class=\"fixed-table-container\">\n      <div class=\"fixed-table-header\"><table></table></div>\n      <div class=\"fixed-table-body\">\n      <div class=\"fixed-table-loading\">\n      <span class=\"loading-wrap\">\n      <span class=\"loading-text\">").concat(this.options.formatLoadingMessage(), "</span>\n      <span class=\"animation-wrap\"><span class=\"animation-dot\"></span></span>\n      </span>\n      </div>\n      </div>\n      <div class=\"fixed-table-footer\"><table><thead><tr></tr></thead></table></div>\n      </div>\n      ").concat(bottomPagination, "\n      </div>\n    "));
-	      this.$container.insertAfter(this.$el);
-	      this.$tableContainer = this.$container.find('.fixed-table-container');
-	      this.$tableHeader = this.$container.find('.fixed-table-header');
-	      this.$tableBody = this.$container.find('.fixed-table-body');
-	      this.$tableLoading = this.$container.find('.fixed-table-loading');
-	      this.$tableFooter = this.$el.find('tfoot'); // checking if custom table-toolbar exists or not
+	  _proto.initConstants = function initConstants() {
+	    var o = this.options;
+	    this.constants = Constants.CONSTANTS;
+	    this.constants.theme = $.fn.bootstrapTable.theme;
+	    var buttonsPrefix = o.buttonsPrefix ? o.buttonsPrefix + "-" : '';
+	    this.constants.buttonsClass = [o.buttonsPrefix, buttonsPrefix + o.buttonsClass, Utils.sprintf(buttonsPrefix + "%s", o.iconSize)].join(' ').trim();
+	  };
 
-	      if (this.options.buttonsToolbar) {
-	        this.$toolbar = $('body').find(this.options.buttonsToolbar);
-	      } else {
-	        this.$toolbar = this.$container.find('.fixed-table-toolbar');
+	  _proto.initLocale = function initLocale() {
+	    if (this.options.locale) {
+	      var locales = $.fn.bootstrapTable.locales;
+	      var parts = this.options.locale.split(/-|_/);
+	      parts[0] = parts[0].toLowerCase();
+
+	      if (parts[1]) {
+	        parts[1] = parts[1].toUpperCase();
 	      }
 
-	      this.$pagination = this.$container.find('.fixed-table-pagination');
-	      this.$tableBody.append(this.$el);
-	      this.$container.after('<div class="clearfix"></div>');
-	      this.$el.addClass(this.options.classes);
-	      this.$tableLoading.addClass(this.options.classes);
-
-	      if (this.options.height) {
-	        this.$tableContainer.addClass('fixed-height');
-
-	        if (this.options.showFooter) {
-	          this.$tableContainer.addClass('has-footer');
-	        }
-
-	        if (this.options.classes.split(' ').includes('table-bordered')) {
-	          this.$tableBody.append('<div class="fixed-table-border"></div>');
-	          this.$tableBorder = this.$tableBody.find('.fixed-table-border');
-	          this.$tableLoading.addClass('fixed-table-border');
-	        }
-
-	        this.$tableFooter = this.$container.find('.fixed-table-footer');
-	      } else {
-	        if (!this.$tableFooter.length) {
-	          this.$el.append('<tfoot><tr></tr></tfoot>');
-	          this.$tableFooter = this.$el.find('tfoot');
-	        }
+	      if (locales[this.options.locale]) {
+	        $.extend(this.options, locales[this.options.locale]);
+	      } else if (locales[parts.join('-')]) {
+	        $.extend(this.options, locales[parts.join('-')]);
+	      } else if (locales[parts[0]]) {
+	        $.extend(this.options, locales[parts[0]]);
 	      }
 	    }
-	  }, {
-	    key: "initTable",
-	    value: function initTable() {
-	      var _this = this;
+	  };
 
-	      var columns = [];
-	      var data = [];
-	      this.$header = this.$el.find('>thead');
+	  _proto.initContainer = function initContainer() {
+	    var topPagination = ['top', 'both'].includes(this.options.paginationVAlign) ? '<div class="fixed-table-pagination clearfix"></div>' : '';
+	    var bottomPagination = ['bottom', 'both'].includes(this.options.paginationVAlign) ? '<div class="fixed-table-pagination"></div>' : '';
+	    this.$container = $("\n      <div class=\"bootstrap-table " + this.constants.theme + "\">\n      <div class=\"fixed-table-toolbar\"></div>\n      " + topPagination + "\n      <div class=\"fixed-table-container\">\n      <div class=\"fixed-table-header\"><table></table></div>\n      <div class=\"fixed-table-body\">\n      <div class=\"fixed-table-loading\">\n      <span class=\"loading-wrap\">\n      <span class=\"loading-text\">" + this.options.formatLoadingMessage() + "</span>\n      <span class=\"animation-wrap\"><span class=\"animation-dot\"></span></span>\n      </span>\n      </div>\n      </div>\n      <div class=\"fixed-table-footer\"><table><thead><tr></tr></thead></table></div>\n      </div>\n      " + bottomPagination + "\n      </div>\n    ");
+	    this.$container.insertAfter(this.$el);
+	    this.$tableContainer = this.$container.find('.fixed-table-container');
+	    this.$tableHeader = this.$container.find('.fixed-table-header');
+	    this.$tableBody = this.$container.find('.fixed-table-body');
+	    this.$tableLoading = this.$container.find('.fixed-table-loading');
+	    this.$tableFooter = this.$el.find('tfoot'); // checking if custom table-toolbar exists or not
 
-	      if (!this.$header.length) {
-	        this.$header = $("<thead class=\"".concat(this.options.theadClasses, "\"></thead>")).appendTo(this.$el);
-	      } else if (this.options.theadClasses) {
-	        this.$header.addClass(this.options.theadClasses);
+	    if (this.options.buttonsToolbar) {
+	      this.$toolbar = $('body').find(this.options.buttonsToolbar);
+	    } else {
+	      this.$toolbar = this.$container.find('.fixed-table-toolbar');
+	    }
+
+	    this.$pagination = this.$container.find('.fixed-table-pagination');
+	    this.$tableBody.append(this.$el);
+	    this.$container.after('<div class="clearfix"></div>');
+	    this.$el.addClass(this.options.classes);
+	    this.$tableLoading.addClass(this.options.classes);
+
+	    if (this.options.height) {
+	      this.$tableContainer.addClass('fixed-height');
+
+	      if (this.options.showFooter) {
+	        this.$tableContainer.addClass('has-footer');
 	      }
 
-	      this.$header.find('tr').each(function (i, el) {
-	        var column = [];
-	        $(el).find('th').each(function (i, el) {
-	          // #2014: getFieldIndex and elsewhere assume this is string, causes issues if not
-	          if (typeof $(el).data('field') !== 'undefined') {
-	            $(el).data('field', "".concat($(el).data('field')));
-	          }
+	      if (this.options.classes.split(' ').includes('table-bordered')) {
+	        this.$tableBody.append('<div class="fixed-table-border"></div>');
+	        this.$tableBorder = this.$tableBody.find('.fixed-table-border');
+	        this.$tableLoading.addClass('fixed-table-border');
+	      }
 
-	          column.push($.extend({}, {
-	            title: $(el).html(),
-	            'class': $(el).attr('class'),
-	            titleTooltip: $(el).attr('title'),
-	            rowspan: $(el).attr('rowspan') ? +$(el).attr('rowspan') : undefined,
-	            colspan: $(el).attr('colspan') ? +$(el).attr('colspan') : undefined
-	          }, $(el).data()));
-	        });
-	        columns.push(column);
+	      this.$tableFooter = this.$container.find('.fixed-table-footer');
+	    } else {
+	      if (!this.$tableFooter.length) {
+	        this.$el.append('<tfoot><tr></tr></tfoot>');
+	        this.$tableFooter = this.$el.find('tfoot');
+	      }
+	    }
+	  };
+
+	  _proto.initTable = function initTable() {
+	    var _this = this;
+
+	    var columns = [];
+	    var data = [];
+	    this.$header = this.$el.find('>thead');
+
+	    if (!this.$header.length) {
+	      this.$header = $("<thead class=\"" + this.options.theadClasses + "\"></thead>").appendTo(this.$el);
+	    } else if (this.options.theadClasses) {
+	      this.$header.addClass(this.options.theadClasses);
+	    }
+
+	    this.$header.find('tr').each(function (i, el) {
+	      var column = [];
+	      $(el).find('th').each(function (i, el) {
+	        // #2014: getFieldIndex and elsewhere assume this is string, causes issues if not
+	        if (typeof $(el).data('field') !== 'undefined') {
+	          $(el).data('field', "" + $(el).data('field'));
+	        }
+
+	        column.push($.extend({}, {
+	          title: $(el).html(),
+	          'class': $(el).attr('class'),
+	          titleTooltip: $(el).attr('title'),
+	          rowspan: $(el).attr('rowspan') ? +$(el).attr('rowspan') : undefined,
+	          colspan: $(el).attr('colspan') ? +$(el).attr('colspan') : undefined
+	        }, $(el).data()));
 	      });
+	      columns.push(column);
+	    });
 
-	      if (!Array.isArray(this.options.columns[0])) {
-	        this.options.columns = [this.options.columns];
-	      }
-
-	      this.options.columns = $.extend(true, [], columns, this.options.columns);
-	      this.columns = [];
-	      this.fieldsColumnsIndex = [];
-	      Utils.setFieldIndex(this.options.columns);
-	      this.options.columns.forEach(function (columns, i) {
-	        columns.forEach(function (_column, j) {
-	          var column = $.extend({}, BootstrapTable.COLUMN_DEFAULTS, _column);
-
-	          if (typeof column.fieldIndex !== 'undefined') {
-	            _this.columns[column.fieldIndex] = column;
-	            _this.fieldsColumnsIndex[column.field] = column.fieldIndex;
-	          }
-
-	          _this.options.columns[i][j] = column;
-	        });
-	      }); // if options.data is setting, do not process tbody and tfoot data
-
-	      if (!this.options.data.length) {
-	        this.options.data = Utils.trToData(this.columns, this.$el.find('>tbody>tr'));
-
-	        if (data.length) {
-	          this.fromHtml = true;
-	        }
-	      }
-
-	      this.footerData = Utils.trToData(this.columns, this.$el.find('>tfoot>tr'));
-
-	      if (this.footerData) {
-	        this.$el.find('tfoot').html('<tr></tr>');
-	      }
-
-	      if (!this.options.showFooter || this.options.cardView) {
-	        this.$tableFooter.hide();
-	      } else {
-	        this.$tableFooter.show();
-	      }
+	    if (!Array.isArray(this.options.columns[0])) {
+	      this.options.columns = [this.options.columns];
 	    }
-	  }, {
-	    key: "initHeader",
-	    value: function initHeader() {
-	      var _this2 = this;
 
-	      var visibleColumns = {};
-	      var html = [];
-	      this.header = {
-	        fields: [],
-	        styles: [],
-	        classes: [],
-	        formatters: [],
-	        detailFormatters: [],
-	        events: [],
-	        sorters: [],
-	        sortNames: [],
-	        cellStyles: [],
-	        searchables: []
-	      };
-	      Utils.updateFieldGroup(this.options.columns);
-	      this.options.columns.forEach(function (columns, i) {
-	        html.push('<tr>');
+	    this.options.columns = $.extend(true, [], columns, this.options.columns);
+	    this.columns = [];
+	    this.fieldsColumnsIndex = [];
+	    Utils.setFieldIndex(this.options.columns);
+	    this.options.columns.forEach(function (columns, i) {
+	      columns.forEach(function (_column, j) {
+	        var column = $.extend({}, BootstrapTable.COLUMN_DEFAULTS, _column);
 
-	        if (i === 0 && !_this2.options.cardView && _this2.options.detailView && _this2.options.detailViewIcon) {
-	          html.push("<th class=\"detail\" rowspan=\"".concat(_this2.options.columns.length, "\">\n          <div class=\"fht-cell\"></div>\n          </th>\n        "));
+	        if (typeof column.fieldIndex !== 'undefined') {
+	          _this.columns[column.fieldIndex] = column;
+	          _this.fieldsColumnsIndex[column.field] = column.fieldIndex;
 	        }
 
-	        columns.forEach(function (column, j) {
-	          var class_ = Utils.sprintf(' class="%s"', column['class']);
-	          var unitWidth = column.widthUnit;
-	          var width = parseFloat(column.width);
-	          var halign = Utils.sprintf('text-align: %s; ', column.halign ? column.halign : column.align);
-	          var align = Utils.sprintf('text-align: %s; ', column.align);
-	          var style = Utils.sprintf('vertical-align: %s; ', column.valign);
-	          style += Utils.sprintf('width: %s; ', (column.checkbox || column.radio) && !width ? !column.showSelectTitle ? '36px' : undefined : width ? width + unitWidth : undefined);
-
-	          if (typeof column.fieldIndex === 'undefined' && !column.visible) {
-	            return;
-	          }
-
-	          if (typeof column.fieldIndex !== 'undefined') {
-	            _this2.header.fields[column.fieldIndex] = column.field;
-	            _this2.header.styles[column.fieldIndex] = align + style;
-	            _this2.header.classes[column.fieldIndex] = class_;
-	            _this2.header.formatters[column.fieldIndex] = column.formatter;
-	            _this2.header.detailFormatters[column.fieldIndex] = column.detailFormatter;
-	            _this2.header.events[column.fieldIndex] = column.events;
-	            _this2.header.sorters[column.fieldIndex] = column.sorter;
-	            _this2.header.sortNames[column.fieldIndex] = column.sortName;
-	            _this2.header.cellStyles[column.fieldIndex] = column.cellStyle;
-	            _this2.header.searchables[column.fieldIndex] = column.searchable;
-
-	            if (!column.visible) {
-	              return;
-	            }
-
-	            if (_this2.options.cardView && !column.cardVisible) {
-	              return;
-	            }
-
-	            visibleColumns[column.field] = column;
-	          }
-
-	          html.push("<th".concat(Utils.sprintf(' title="%s"', column.titleTooltip)), column.checkbox || column.radio ? Utils.sprintf(' class="bs-checkbox %s"', column['class'] || '') : class_, Utils.sprintf(' style="%s"', halign + style), Utils.sprintf(' rowspan="%s"', column.rowspan), Utils.sprintf(' colspan="%s"', column.colspan), Utils.sprintf(' data-field="%s"', column.field), // If `column` is not the first element of `this.options.columns[0]`, then className 'data-not-first-th' should be added.
-	          j === 0 && i > 0 ? ' data-not-first-th' : '', '>');
-	          html.push(Utils.sprintf('<div class="th-inner %s">', _this2.options.sortable && column.sortable ? 'sortable both' : ''));
-	          var text = _this2.options.escape ? Utils.escapeHTML(column.title) : column.title;
-	          var title = text;
-
-	          if (column.checkbox) {
-	            text = '';
-
-	            if (!_this2.options.singleSelect && _this2.options.checkboxHeader) {
-	              text = '<label><input name="btSelectAll" type="checkbox" /><span></span></label>';
-	            }
-
-	            _this2.header.stateField = column.field;
-	          }
-
-	          if (column.radio) {
-	            text = '';
-	            _this2.header.stateField = column.field;
-	            _this2.options.singleSelect = true;
-	          }
-
-	          if (!text && column.showSelectTitle) {
-	            text += title;
-	          }
-
-	          html.push(text);
-	          html.push('</div>');
-	          html.push('<div class="fht-cell"></div>');
-	          html.push('</div>');
-	          html.push('</th>');
-	        });
-	        html.push('</tr>');
+	        _this.options.columns[i][j] = column;
 	      });
-	      this.$header.html(html.join(''));
-	      this.$header.find('th[data-field]').each(function (i, el) {
-	        $(el).data(visibleColumns[$(el).data('field')]);
-	      });
-	      this.$container.off('click', '.th-inner').on('click', '.th-inner', function (e) {
-	        var $this = $(e.currentTarget);
+	    }); // if options.data is setting, do not process tbody and tfoot data
 
-	        if (_this2.options.detailView && !$this.parent().hasClass('bs-checkbox')) {
-	          if ($this.closest('.bootstrap-table')[0] !== _this2.$container[0]) {
-	            return false;
-	          }
-	        }
+	    if (!this.options.data.length) {
+	      this.options.data = Utils.trToData(this.columns, this.$el.find('>tbody>tr'));
 
-	        if (_this2.options.sortable && $this.parent().data().sortable) {
-	          _this2.onSort(e);
-	        }
-	      });
-	      this.$header.children().children().off('keypress').on('keypress', function (e) {
-	        if (_this2.options.sortable && $(e.currentTarget).data().sortable) {
-	          var code = e.keyCode || e.which;
-
-	          if (code === 13) {
-	            // Enter keycode
-	            _this2.onSort(e);
-	          }
-	        }
-	      });
-	      var resizeEvent = "resize.bootstrap-table".concat(this.$el.attr('id') || '');
-	      $(window).off(resizeEvent);
-
-	      if (!this.options.showHeader || this.options.cardView) {
-	        this.$header.hide();
-	        this.$tableHeader.hide();
-	        this.$tableLoading.css('top', 0);
-	      } else {
-	        this.$header.show();
-	        this.$tableHeader.show();
-	        this.$tableLoading.css('top', this.$header.outerHeight() + 1); // Assign the correct sortable arrow
-
-	        this.getCaret();
-	        $(window).on(resizeEvent, function (e) {
-	          return _this2.resetWidth(e);
-	        });
-	      }
-
-	      this.$selectAll = this.$header.find('[name="btSelectAll"]');
-	      this.$selectAll.off('click').on('click', function (_ref) {
-	        var currentTarget = _ref.currentTarget;
-	        var checked = $(currentTarget).prop('checked');
-
-	        _this2[checked ? 'checkAll' : 'uncheckAll']();
-
-	        _this2.updateSelected();
-	      });
-	    }
-	  }, {
-	    key: "initData",
-	    value: function initData(data, type) {
-	      if (type === 'append') {
-	        this.options.data = this.options.data.concat(data);
-	      } else if (type === 'prepend') {
-	        this.options.data = [].concat(data).concat(this.options.data);
-	      } else {
-	        this.options.data = data || this.options.data;
-	      }
-
-	      this.data = this.options.data;
-
-	      if (this.options.sidePagination === 'server') {
-	        return;
-	      }
-
-	      this.initSort();
-	    }
-	  }, {
-	    key: "initSort",
-	    value: function initSort() {
-	      var _this3 = this;
-
-	      var name = this.options.sortName;
-	      var order = this.options.sortOrder === 'desc' ? -1 : 1;
-	      var index = this.header.fields.indexOf(this.options.sortName);
-	      var timeoutId = 0;
-
-	      if (index !== -1) {
-	        if (this.options.sortStable) {
-	          this.data.forEach(function (row, i) {
-	            if (!row.hasOwnProperty('_position')) {
-	              row._position = i;
-	            }
-	          });
-	        }
-
-	        if (this.options.customSort) {
-	          Utils.calculateObjectValue(this.options, this.options.customSort, [this.options.sortName, this.options.sortOrder, this.data]);
-	        } else {
-	          this.data.sort(function (a, b) {
-	            if (_this3.header.sortNames[index]) {
-	              name = _this3.header.sortNames[index];
-	            }
-
-	            var aa = Utils.getItemField(a, name, _this3.options.escape);
-	            var bb = Utils.getItemField(b, name, _this3.options.escape);
-	            var value = Utils.calculateObjectValue(_this3.header, _this3.header.sorters[index], [aa, bb, a, b]);
-
-	            if (value !== undefined) {
-	              if (_this3.options.sortStable && value === 0) {
-	                return order * (a._position - b._position);
-	              }
-
-	              return order * value;
-	            }
-
-	            return Utils.sort(aa, bb, order, _this3.options.sortStable);
-	          });
-	        }
-
-	        if (this.options.sortClass !== undefined) {
-	          clearTimeout(timeoutId);
-	          timeoutId = setTimeout(function () {
-	            _this3.$el.removeClass(_this3.options.sortClass);
-
-	            var index = _this3.$header.find("[data-field=\"".concat(_this3.options.sortName, "\"]")).index();
-
-	            _this3.$el.find("tr td:nth-child(".concat(index + 1, ")")).addClass(_this3.options.sortClass);
-	          }, 250);
-	        }
+	      if (data.length) {
+	        this.fromHtml = true;
 	      }
 	    }
-	  }, {
-	    key: "onSort",
-	    value: function onSort(_ref2) {
-	      var type = _ref2.type,
-	          currentTarget = _ref2.currentTarget;
-	      var $this = type === 'keypress' ? $(currentTarget) : $(currentTarget).parent();
-	      var $this_ = this.$header.find('th').eq($this.index());
-	      this.$header.add(this.$header_).find('span.order').remove();
 
-	      if (this.options.sortName === $this.data('field')) {
-	        this.options.sortOrder = this.options.sortOrder === 'asc' ? 'desc' : 'asc';
-	      } else {
-	        this.options.sortName = $this.data('field');
+	    this.footerData = Utils.trToData(this.columns, this.$el.find('>tfoot>tr'));
 
-	        if (this.options.rememberOrder) {
-	          this.options.sortOrder = $this.data('order') === 'asc' ? 'desc' : 'asc';
-	        } else {
-	          this.options.sortOrder = this.columns[this.fieldsColumnsIndex[$this.data('field')]].sortOrder || this.columns[this.fieldsColumnsIndex[$this.data('field')]].order;
-	        }
-	      }
-
-	      this.trigger('sort', this.options.sortName, this.options.sortOrder);
-	      $this.add($this_).data('order', this.options.sortOrder); // Assign the correct sortable arrow
-
-	      this.getCaret();
-
-	      if (this.options.sidePagination === 'server') {
-	        this.options.pageNumber = 1;
-	        this.initServer(this.options.silentSort);
-	        return;
-	      }
-
-	      this.initSort();
-	      this.initBody();
+	    if (this.footerData) {
+	      this.$el.find('tfoot').html('<tr></tr>');
 	    }
-	  }, {
-	    key: "initToolbar",
-	    value: function initToolbar() {
-	      var _this4 = this;
 
-	      var o = this.options;
-	      var html = [];
-	      var timeoutId = 0;
-	      var $keepOpen;
-	      var switchableCount = 0;
-
-	      if (this.$toolbar.find('.bs-bars').children().length) {
-	        $('body').append($(o.toolbar));
-	      }
-
-	      this.$toolbar.html('');
-
-	      if (typeof o.toolbar === 'string' || _typeof(o.toolbar) === 'object') {
-	        $(Utils.sprintf('<div class="bs-bars %s-%s"></div>', this.constants.classes.pull, o.toolbarAlign)).appendTo(this.$toolbar).append($(o.toolbar));
-	      } // showColumns, showToggle, showRefresh
-
-
-	      html = ["<div class=\"".concat(['columns', "columns-".concat(o.buttonsAlign), this.constants.classes.buttonsGroup, "".concat(this.constants.classes.pull, "-").concat(o.buttonsAlign)].join(' '), "\">")];
-
-	      if (typeof o.icons === 'string') {
-	        o.icons = Utils.calculateObjectValue(null, o.icons);
-	      }
-
-	      if (o.showPaginationSwitch) {
-	        html.push("<button class=\"".concat(this.constants.buttonsClass, "\" type=\"button\" name=\"paginationSwitch\"\n        aria-label=\"Pagination Switch\" title=\"").concat(o.formatPaginationSwitch(), "\">\n        ").concat(o.showButtonIcons ? Utils.sprintf(this.constants.html.icon, o.iconsPrefix, o.icons.paginationSwitchDown) : '', "\n        ").concat(o.showButtonText ? o.formatPaginationSwitchUp() : '', "\n        </button>"));
-	      }
-
-	      if (o.showRefresh) {
-	        html.push("<button class=\"".concat(this.constants.buttonsClass, "\" type=\"button\" name=\"refresh\"\n        aria-label=\"Refresh\" title=\"").concat(o.formatRefresh(), "\">\n        ").concat(o.showButtonIcons ? Utils.sprintf(this.constants.html.icon, o.iconsPrefix, o.icons.refresh) : '', "\n        ").concat(o.showButtonText ? o.formatRefresh() : '', "\n        </button>"));
-	      }
-
-	      if (o.showToggle) {
-	        html.push("<button class=\"".concat(this.constants.buttonsClass, "\" type=\"button\" name=\"toggle\"\n        aria-label=\"Toggle\" title=\"").concat(o.formatToggle(), "\">\n        ").concat(o.showButtonIcons ? Utils.sprintf(this.constants.html.icon, o.iconsPrefix, o.icons.toggleOff) : '', "\n        ").concat(o.showButtonText ? o.formatToggleOn() : '', "\n        </button>"));
-	      }
-
-	      if (o.showFullscreen) {
-	        html.push("<button class=\"".concat(this.constants.buttonsClass, "\" type=\"button\" name=\"fullscreen\"\n        aria-label=\"Fullscreen\" title=\"").concat(o.formatFullscreen(), "\">\n        ").concat(o.showButtonIcons ? Utils.sprintf(this.constants.html.icon, o.iconsPrefix, o.icons.fullscreen) : '', "\n        ").concat(o.showButtonText ? o.formatFullscreen() : '', "\n        </button>"));
-	      }
-
-	      if (o.showColumns) {
-	        html.push("<div class=\"keep-open ".concat(this.constants.classes.buttonsDropdown, "\" title=\"").concat(o.formatColumns(), "\">\n        <button class=\"").concat(this.constants.buttonsClass, " dropdown-toggle\" type=\"button\" data-toggle=\"dropdown\"\n        aria-label=\"Columns\" title=\"").concat(o.formatColumns(), "\">\n        ").concat(o.showButtonIcons ? Utils.sprintf(this.constants.html.icon, o.iconsPrefix, o.icons.columns) : '', "\n        ").concat(o.showButtonText ? o.formatColumns() : '', "\n        ").concat(this.constants.html.dropdownCaret, "\n        </button>\n        ").concat(this.constants.html.toolbarDropdown[0]));
-
-	        if (o.showColumnsToggleAll) {
-	          var allFieldsVisible = this.getVisibleColumns().length === this.columns.length;
-	          html.push(Utils.sprintf(this.constants.html.toolbarDropdownItem, Utils.sprintf('<input type="checkbox" class="toggle-all" %s> <span>%s</span>', allFieldsVisible ? 'checked="checked"' : '', o.formatColumnsToggleAll())));
-	          html.push(this.constants.html.toolbarDropdownSeparator);
-	        }
-
-	        this.columns.forEach(function (column, i) {
-	          if (column.radio || column.checkbox) {
-	            return;
-	          }
-
-	          if (o.cardView && !column.cardVisible) {
-	            return;
-	          }
-
-	          var checked = column.visible ? ' checked="checked"' : '';
-
-	          if (column.switchable) {
-	            html.push(Utils.sprintf(_this4.constants.html.toolbarDropdownItem, Utils.sprintf('<input type="checkbox" data-field="%s" value="%s"%s> <span>%s</span>', column.field, i, checked, column.title)));
-	            switchableCount++;
-	          }
-	        });
-	        html.push(this.constants.html.toolbarDropdown[1], '</div>');
-	      }
-
-	      html.push('</div>'); // Fix #188: this.showToolbar is for extensions
-
-	      if (this.showToolbar || html.length > 2) {
-	        this.$toolbar.append(html.join(''));
-	      }
-
-	      if (o.showPaginationSwitch) {
-	        this.$toolbar.find('button[name="paginationSwitch"]').off('click').on('click', function () {
-	          return _this4.togglePagination();
-	        });
-	      }
-
-	      if (o.showFullscreen) {
-	        this.$toolbar.find('button[name="fullscreen"]').off('click').on('click', function () {
-	          return _this4.toggleFullscreen();
-	        });
-	      }
-
-	      if (o.showRefresh) {
-	        this.$toolbar.find('button[name="refresh"]').off('click').on('click', function () {
-	          return _this4.refresh();
-	        });
-	      }
-
-	      if (o.showToggle) {
-	        this.$toolbar.find('button[name="toggle"]').off('click').on('click', function () {
-	          _this4.toggleView();
-	        });
-	      }
-
-	      if (o.showColumns) {
-	        $keepOpen = this.$toolbar.find('.keep-open');
-	        var $checkboxes = $keepOpen.find('input:not(".toggle-all")');
-	        var $toggleAll = $keepOpen.find('input.toggle-all');
-
-	        if (switchableCount <= o.minimumCountColumns) {
-	          $keepOpen.find('input').prop('disabled', true);
-	        }
-
-	        $keepOpen.find('li, label').off('click').on('click', function (e) {
-	          e.stopImmediatePropagation();
-	        });
-	        $checkboxes.off('click').on('click', function (_ref3) {
-	          var currentTarget = _ref3.currentTarget;
-	          var $this = $(currentTarget);
-
-	          _this4._toggleColumn($this.val(), $this.prop('checked'), false);
-
-	          _this4.trigger('column-switch', $this.data('field'), $this.prop('checked'));
-
-	          $toggleAll.prop('checked', $checkboxes.filter(':checked').length === _this4.columns.length);
-	        });
-	        $toggleAll.off('click').on('click', function (_ref4) {
-	          var currentTarget = _ref4.currentTarget;
-
-	          _this4._toggleAllColumns($(currentTarget).prop('checked'));
-	        });
-	      } // Fix #4516: this.showSearchClearButton is for extensions
-
-
-	      if (o.search || this.showSearchClearButton) {
-	        html = [];
-	        var showSearchButton = Utils.sprintf(this.constants.html.searchButton, this.constants.buttonsClass, o.formatSearch(), o.showButtonIcons ? Utils.sprintf(this.constants.html.icon, o.iconsPrefix, o.icons.search) : '', o.showButtonText ? o.formatSearch() : '');
-	        var showSearchClearButton = Utils.sprintf(this.constants.html.searchClearButton, this.constants.buttonsClass, o.formatClearSearch(), o.showButtonIcons ? Utils.sprintf(this.constants.html.icon, o.iconsPrefix, o.icons.clearSearch) : '', o.showButtonText ? o.formatClearSearch() : '');
-	        var searchInputHtml = "<input class=\"".concat(this.constants.classes.input, "\n        ").concat(Utils.sprintf(' %s%s', this.constants.classes.inputPrefix, o.iconSize), "\n        search-input\" type=\"text\" placeholder=\"").concat(o.formatSearch(), "\">");
-	        var searchInputFinalHtml = searchInputHtml;
-
-	        if (o.showSearchButton || o.showSearchClearButton) {
-	          var buttonsHtml = (o.showSearchButton ? showSearchButton : '') + (o.showSearchClearButton ? showSearchClearButton : '');
-	          searchInputFinalHtml = o.search ? Utils.sprintf(this.constants.html.inputGroup, searchInputHtml, buttonsHtml) : buttonsHtml;
-	        }
-
-	        html.push(Utils.sprintf("\n        <div class=\"".concat(this.constants.classes.pull, "-").concat(o.searchAlign, " search ").concat(this.constants.classes.inputGroup, "\">\n          %s\n        </div>\n      "), searchInputFinalHtml));
-	        this.$toolbar.append(html.join(''));
-	        var $searchInput = this.$toolbar.find('.search input');
-
-	        var handleInputEvent = function handleInputEvent() {
-	          var eventTriggers = Utils.isIEBrowser() ? 'mouseup' : 'keyup drop blur';
-	          $searchInput.off(eventTriggers).on(eventTriggers, function (event) {
-	            if (o.searchOnEnterKey && event.keyCode !== 13) {
-	              return;
-	            }
-
-	            if ([37, 38, 39, 40].includes(event.keyCode)) {
-	              return;
-	            }
-
-	            clearTimeout(timeoutId); // doesn't matter if it's 0
-
-	            timeoutId = setTimeout(function () {
-	              _this4.onSearch(event);
-	            }, o.searchTimeOut);
-	          });
-	        };
-
-	        if (o.showSearchButton) {
-	          this.$toolbar.find('.search button[name=search]').off('click').on('click', function (event) {
-	            clearTimeout(timeoutId); // doesn't matter if it's 0
-
-	            timeoutId = setTimeout(function () {
-	              _this4.onSearch({
-	                currentTarget: $searchInput
-	              });
-	            }, o.searchTimeOut);
-	          });
-
-	          if (o.searchOnEnterKey) {
-	            handleInputEvent();
-	          }
-	        } else {
-	          handleInputEvent();
-	        }
-
-	        if (o.showSearchClearButton) {
-	          this.$toolbar.find('.search button[name=clearSearch]').click(function () {
-	            _this4.resetSearch();
-	          });
-	        }
-	      }
+	    if (!this.options.showFooter || this.options.cardView) {
+	      this.$tableFooter.hide();
+	    } else {
+	      this.$tableFooter.show();
 	    }
-	  }, {
-	    key: "onSearch",
-	    value: function onSearch() {
-	      var _ref5 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
-	          currentTarget = _ref5.currentTarget,
-	          firedByInitSearchText = _ref5.firedByInitSearchText;
+	  };
 
-	      var overwriteSearchText = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
+	  _proto.initHeader = function initHeader() {
+	    var _this2 = this;
 
-	      if (currentTarget !== undefined && $(currentTarget).length && overwriteSearchText) {
-	        var text = $(currentTarget).val().trim();
+	    var visibleColumns = {};
+	    var html = [];
+	    this.header = {
+	      fields: [],
+	      styles: [],
+	      classes: [],
+	      formatters: [],
+	      detailFormatters: [],
+	      events: [],
+	      sorters: [],
+	      sortNames: [],
+	      cellStyles: [],
+	      searchables: []
+	    };
+	    Utils.updateFieldGroup(this.options.columns);
+	    this.options.columns.forEach(function (columns, i) {
+	      html.push('<tr>');
 
-	        if (this.options.trimOnSearch && $(currentTarget).val() !== text) {
-	          $(currentTarget).val(text);
-	        }
+	      if (i === 0 && !_this2.options.cardView && _this2.options.detailView && _this2.options.detailViewIcon) {
+	        html.push("<th class=\"detail\" rowspan=\"" + _this2.options.columns.length + "\">\n          <div class=\"fht-cell\"></div>\n          </th>\n        ");
+	      }
 
-	        if (this.searchText === text) {
+	      columns.forEach(function (column, j) {
+	        var class_ = Utils.sprintf(' class="%s"', column['class']);
+	        var unitWidth = column.widthUnit;
+	        var width = parseFloat(column.width);
+	        var halign = Utils.sprintf('text-align: %s; ', column.halign ? column.halign : column.align);
+	        var align = Utils.sprintf('text-align: %s; ', column.align);
+	        var style = Utils.sprintf('vertical-align: %s; ', column.valign);
+	        style += Utils.sprintf('width: %s; ', (column.checkbox || column.radio) && !width ? !column.showSelectTitle ? '36px' : undefined : width ? width + unitWidth : undefined);
+
+	        if (typeof column.fieldIndex === 'undefined' && !column.visible) {
 	          return;
 	        }
 
-	        if ($(currentTarget).hasClass('search-input')) {
-	          this.searchText = text;
-	          this.options.searchText = text;
-	        }
-	      }
-
-	      if (!firedByInitSearchText) {
-	        this.options.pageNumber = 1;
-	      }
-
-	      this.initSearch();
-
-	      if (firedByInitSearchText) {
-	        if (this.options.sidePagination === 'client') {
-	          this.updatePagination();
-	        }
-	      } else {
-	        this.updatePagination();
-	      }
-
-	      this.trigger('search', this.searchText);
-	    }
-	  }, {
-	    key: "initSearch",
-	    value: function initSearch() {
-	      var _this5 = this;
-
-	      this.filterOptions = this.filterOptions || this.options.filterOptions;
-
-	      if (this.options.sidePagination !== 'server') {
-	        if (this.options.customSearch) {
-	          this.data = Utils.calculateObjectValue(this.options, this.options.customSearch, [this.options.data, this.searchText, this.filterColumns]);
-	          return;
-	        }
-
-	        var s = this.searchText && (this.options.escape ? Utils.escapeHTML(this.searchText) : this.searchText).toLowerCase();
-	        var f = Utils.isEmptyObject(this.filterColumns) ? null : this.filterColumns; // Check filter
-
-	        if (typeof this.filterOptions.filterAlgorithm === 'function') {
-	          this.data = this.options.data.filter(function (item, i) {
-	            return _this5.filterOptions.filterAlgorithm.apply(null, [item, f]);
-	          });
-	        } else if (typeof this.filterOptions.filterAlgorithm === 'string') {
-	          this.data = f ? this.options.data.filter(function (item, i) {
-	            var filterAlgorithm = _this5.filterOptions.filterAlgorithm;
-
-	            if (filterAlgorithm === 'and') {
-	              for (var key in f) {
-	                if (Array.isArray(f[key]) && !f[key].includes(item[key]) || !Array.isArray(f[key]) && item[key] !== f[key]) {
-	                  return false;
-	                }
-	              }
-	            } else if (filterAlgorithm === 'or') {
-	              var match = false;
-
-	              for (var _key in f) {
-	                if (Array.isArray(f[_key]) && f[_key].includes(item[_key]) || !Array.isArray(f[_key]) && item[_key] === f[_key]) {
-	                  match = true;
-	                }
-	              }
-
-	              return match;
-	            }
-
-	            return true;
-	          }) : this.options.data;
-	        }
-
-	        var visibleFields = this.getVisibleFields();
-	        this.data = s ? this.data.filter(function (item, i) {
-	          for (var j = 0; j < _this5.header.fields.length; j++) {
-	            if (!_this5.header.searchables[j] || _this5.options.visibleSearch && visibleFields.indexOf(_this5.header.fields[j]) === -1) {
-	              continue;
-	            }
-
-	            var key = Utils.isNumeric(_this5.header.fields[j]) ? parseInt(_this5.header.fields[j], 10) : _this5.header.fields[j];
-	            var column = _this5.columns[_this5.fieldsColumnsIndex[key]];
-	            var value = void 0;
-
-	            if (typeof key === 'string') {
-	              value = item;
-	              var props = key.split('.');
-
-	              for (var _i = 0; _i < props.length; _i++) {
-	                if (value[props[_i]] !== null) {
-	                  value = value[props[_i]];
-	                }
-	              }
-	            } else {
-	              value = item[key];
-	            } // Fix #142: respect searchFormatter boolean
-
-
-	            if (column && column.searchFormatter) {
-	              value = Utils.calculateObjectValue(column, _this5.header.formatters[j], [value, item, i, column.field], value);
-	            }
-
-	            if (typeof value === 'string' || typeof value === 'number') {
-	              if (_this5.options.strictSearch) {
-	                if ("".concat(value).toLowerCase() === s) {
-	                  return true;
-	                }
-	              } else {
-	                var largerSmallerEqualsRegex = /(?:(<=|=>|=<|>=|>|<)(?:\s+)?(\d+)?|(\d+)?(\s+)?(<=|=>|=<|>=|>|<))/gm;
-	                var matches = largerSmallerEqualsRegex.exec(s);
-	                var comparisonCheck = false;
-
-	                if (matches) {
-	                  var operator = matches[1] || "".concat(matches[5], "l");
-	                  var comparisonValue = matches[2] || matches[3];
-	                  var int = parseInt(value, 10);
-	                  var comparisonInt = parseInt(comparisonValue, 10);
-
-	                  switch (operator) {
-	                    case '>':
-	                    case '<l':
-	                      comparisonCheck = int > comparisonInt;
-	                      break;
-
-	                    case '<':
-	                    case '>l':
-	                      comparisonCheck = int < comparisonInt;
-	                      break;
-
-	                    case '<=':
-	                    case '=<':
-	                    case '>=l':
-	                    case '=>l':
-	                      comparisonCheck = int <= comparisonInt;
-	                      break;
-
-	                    case '>=':
-	                    case '=>':
-	                    case '<=l':
-	                    case '=<l':
-	                      comparisonCheck = int >= comparisonInt;
-	                      break;
-
-	                    default:
-	                      break;
-	                  }
-	                }
-
-	                if (comparisonCheck || "".concat(value).toLowerCase().includes(s)) {
-	                  return true;
-	                }
-	              }
-	            }
-	          }
-
-	          return false;
-	        }) : this.data;
-	      }
-	    }
-	  }, {
-	    key: "initPagination",
-	    value: function initPagination() {
-	      var _this6 = this;
-
-	      var o = this.options;
-
-	      if (!o.pagination) {
-	        this.$pagination.hide();
-	        return;
-	      }
-
-	      this.$pagination.show();
-	      var html = [];
-	      var $allSelected = false;
-	      var i;
-	      var from;
-	      var to;
-	      var $pageList;
-	      var $pre;
-	      var $next;
-	      var $number;
-	      var data = this.getData({
-	        includeHiddenRows: false
-	      });
-	      var pageList = o.pageList;
-
-	      if (o.sidePagination !== 'server') {
-	        o.totalRows = data.length;
-	      }
-
-	      this.totalPages = 0;
-
-	      if (o.totalRows) {
-	        if (o.pageSize === o.formatAllRows()) {
-	          o.pageSize = o.totalRows;
-	          $allSelected = true;
-	        } else if (o.pageSize === o.totalRows) {
-	          // Fix #667 Table with pagination,
-	          // multiple pages and a search this matches to one page throws exception
-	          var pageLst = typeof o.pageList === 'string' ? o.pageList.replace('[', '').replace(']', '').replace(/ /g, '').toLowerCase().split(',') : o.pageList;
-
-	          if (pageLst.includes(o.formatAllRows().toLowerCase())) {
-	            $allSelected = true;
-	          }
-	        }
-
-	        this.totalPages = ~~((o.totalRows - 1) / o.pageSize) + 1;
-	        o.totalPages = this.totalPages;
-	      }
-
-	      if (this.totalPages > 0 && o.pageNumber > this.totalPages) {
-	        o.pageNumber = this.totalPages;
-	      }
-
-	      this.pageFrom = (o.pageNumber - 1) * o.pageSize + 1;
-	      this.pageTo = o.pageNumber * o.pageSize;
-
-	      if (this.pageTo > o.totalRows) {
-	        this.pageTo = o.totalRows;
-	      }
-
-	      if (this.options.pagination && this.options.sidePagination !== 'server') {
-	        this.options.totalNotFiltered = this.options.data.length;
-	      }
-
-	      if (!this.options.showExtendedPagination) {
-	        this.options.totalNotFiltered = undefined;
-	      }
-
-	      var paginationInfo = o.onlyInfoPagination ? o.formatDetailPagination(o.totalRows) : o.formatShowingRows(this.pageFrom, this.pageTo, o.totalRows, o.totalNotFiltered);
-	      html.push("<div class=\"".concat(this.constants.classes.pull, "-").concat(o.paginationDetailHAlign, " pagination-detail\">\n      <span class=\"pagination-info\">\n      ").concat(paginationInfo, "\n      </span>"));
-
-	      if (!o.onlyInfoPagination) {
-	        html.push('<span class="page-list">');
-	        var pageNumber = ["<span class=\"".concat(this.constants.classes.paginationDropdown, "\">\n        <button class=\"").concat(this.constants.buttonsClass, " dropdown-toggle\" type=\"button\" data-toggle=\"dropdown\">\n        <span class=\"page-size\">\n        ").concat($allSelected ? o.formatAllRows() : o.pageSize, "\n        </span>\n        ").concat(this.constants.html.dropdownCaret, "\n        </button>\n        ").concat(this.constants.html.pageDropdown[0])];
-
-	        if (typeof o.pageList === 'string') {
-	          var list = o.pageList.replace('[', '').replace(']', '').replace(/ /g, '').split(',');
-	          pageList = [];
-	          var _iteratorNormalCompletion = true;
-	          var _didIteratorError = false;
-	          var _iteratorError = undefined;
-
-	          try {
-	            for (var _iterator = list[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-	              var value = _step.value;
-	              pageList.push(value.toLowerCase() === o.formatAllRows().toLowerCase() || ['all', 'unlimited'].includes(value.toLowerCase()) ? o.formatAllRows() : +value);
-	            }
-	          } catch (err) {
-	            _didIteratorError = true;
-	            _iteratorError = err;
-	          } finally {
-	            try {
-	              if (!_iteratorNormalCompletion && _iterator.return != null) {
-	                _iterator.return();
-	              }
-	            } finally {
-	              if (_didIteratorError) {
-	                throw _iteratorError;
-	              }
-	            }
-	          }
-	        }
-
-	        pageList.forEach(function (page, i) {
-	          if (!o.smartDisplay || i === 0 || pageList[i - 1] < o.totalRows) {
-	            var active;
-
-	            if ($allSelected) {
-	              active = page === o.formatAllRows() ? _this6.constants.classes.dropdownActive : '';
-	            } else {
-	              active = page === o.pageSize ? _this6.constants.classes.dropdownActive : '';
-	            }
-
-	            pageNumber.push(Utils.sprintf(_this6.constants.html.pageDropdownItem, active, page));
-	          }
-	        });
-	        pageNumber.push("".concat(this.constants.html.pageDropdown[1], "</span>"));
-	        html.push(o.formatRecordsPerPage(pageNumber.join('')));
-	        html.push('</span></div>');
-	        html.push("<div class=\"".concat(this.constants.classes.pull, "-").concat(o.paginationHAlign, " pagination\">"), Utils.sprintf(this.constants.html.pagination[0], Utils.sprintf(' pagination-%s', o.iconSize)), Utils.sprintf(this.constants.html.paginationItem, ' page-pre', o.formatSRPaginationPreText(), o.paginationPreText));
-
-	        if (this.totalPages < o.paginationSuccessivelySize) {
-	          from = 1;
-	          to = this.totalPages;
-	        } else {
-	          from = o.pageNumber - o.paginationPagesBySide;
-	          to = from + o.paginationPagesBySide * 2;
-	        }
-
-	        if (o.pageNumber < o.paginationSuccessivelySize - 1) {
-	          to = o.paginationSuccessivelySize;
-	        }
-
-	        if (o.paginationSuccessivelySize > this.totalPages - from) {
-	          from = from - (o.paginationSuccessivelySize - (this.totalPages - from)) + 1;
-	        }
-
-	        if (from < 1) {
-	          from = 1;
-	        }
-
-	        if (to > this.totalPages) {
-	          to = this.totalPages;
-	        }
-
-	        var middleSize = Math.round(o.paginationPagesBySide / 2);
-
-	        var pageItem = function pageItem(i) {
-	          var classes = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '';
-	          return Utils.sprintf(_this6.constants.html.paginationItem, classes + (i === o.pageNumber ? " ".concat(_this6.constants.classes.paginationActive) : ''), o.formatSRPaginationPageText(i), i);
-	        };
-
-	        if (from > 1) {
-	          var max = o.paginationPagesBySide;
-	          if (max >= from) max = from - 1;
-
-	          for (i = 1; i <= max; i++) {
-	            html.push(pageItem(i));
-	          }
-
-	          if (from - 1 === max + 1) {
-	            i = from - 1;
-	            html.push(pageItem(i));
-	          } else {
-	            if (from - 1 > max) {
-	              if (from - o.paginationPagesBySide * 2 > o.paginationPagesBySide && o.paginationUseIntermediate) {
-	                i = Math.round((from - middleSize) / 2 + middleSize);
-	                html.push(pageItem(i, ' page-intermediate'));
-	              } else {
-	                html.push(Utils.sprintf(this.constants.html.paginationItem, ' page-first-separator disabled', '', '...'));
-	              }
-	            }
-	          }
-	        }
-
-	        for (i = from; i <= to; i++) {
-	          html.push(pageItem(i));
-	        }
-
-	        if (this.totalPages > to) {
-	          var min = this.totalPages - (o.paginationPagesBySide - 1);
-	          if (to >= min) min = to + 1;
-
-	          if (to + 1 === min - 1) {
-	            i = to + 1;
-	            html.push(pageItem(i));
-	          } else {
-	            if (min > to + 1) {
-	              if (this.totalPages - to > o.paginationPagesBySide * 2 && o.paginationUseIntermediate) {
-	                i = Math.round((this.totalPages - middleSize - to) / 2 + to);
-	                html.push(pageItem(i, ' page-intermediate'));
-	              } else {
-	                html.push(Utils.sprintf(this.constants.html.paginationItem, ' page-last-separator disabled', '', '...'));
-	              }
-	            }
-	          }
-
-	          for (i = min; i <= this.totalPages; i++) {
-	            html.push(pageItem(i));
-	          }
-	        }
-
-	        html.push(Utils.sprintf(this.constants.html.paginationItem, ' page-next', o.formatSRPaginationNextText(), o.paginationNextText));
-	        html.push(this.constants.html.pagination[1], '</div>');
-	      }
-
-	      this.$pagination.html(html.join(''));
-	      var dropupClass = ['bottom', 'both'].includes(o.paginationVAlign) ? " ".concat(this.constants.classes.dropup) : '';
-	      this.$pagination.last().find('.page-list > span').addClass(dropupClass);
-
-	      if (!o.onlyInfoPagination) {
-	        $pageList = this.$pagination.find('.page-list a');
-	        $pre = this.$pagination.find('.page-pre');
-	        $next = this.$pagination.find('.page-next');
-	        $number = this.$pagination.find('.page-item').not('.page-next, .page-pre, .page-last-separator, .page-first-separator');
-
-	        if (this.totalPages <= 1) {
-	          this.$pagination.find('div.pagination').hide();
-	        }
-
-	        if (o.smartDisplay) {
-	          if (pageList.length < 2 || o.totalRows <= pageList[0]) {
-	            this.$pagination.find('span.page-list').hide();
-	          }
-	        } // when data is empty, hide the pagination
-
-
-	        this.$pagination[this.getData().length ? 'show' : 'hide']();
-
-	        if (!o.paginationLoop) {
-	          if (o.pageNumber === 1) {
-	            $pre.addClass('disabled');
-	          }
-
-	          if (o.pageNumber === this.totalPages) {
-	            $next.addClass('disabled');
-	          }
-	        }
-
-	        if ($allSelected) {
-	          o.pageSize = o.formatAllRows();
-	        } // removed the events for last and first, onPageNumber executeds the same logic
-
-
-	        $pageList.off('click').on('click', function (e) {
-	          return _this6.onPageListChange(e);
-	        });
-	        $pre.off('click').on('click', function (e) {
-	          return _this6.onPagePre(e);
-	        });
-	        $next.off('click').on('click', function (e) {
-	          return _this6.onPageNext(e);
-	        });
-	        $number.off('click').on('click', function (e) {
-	          return _this6.onPageNumber(e);
-	        });
-	      }
-	    }
-	  }, {
-	    key: "updatePagination",
-	    value: function updatePagination(event) {
-	      // Fix #171: IE disabled button can be clicked bug.
-	      if (event && $(event.currentTarget).hasClass('disabled')) {
-	        return;
-	      }
-
-	      if (!this.options.maintainMetaData) {
-	        this.resetRows();
-	      }
-
-	      this.initPagination();
-
-	      if (this.options.sidePagination === 'server') {
-	        this.initServer();
-	      } else {
-	        this.initBody();
-	      }
-
-	      this.trigger('page-change', this.options.pageNumber, this.options.pageSize);
-	    }
-	  }, {
-	    key: "onPageListChange",
-	    value: function onPageListChange(event) {
-	      event.preventDefault();
-	      var $this = $(event.currentTarget);
-	      $this.parent().addClass(this.constants.classes.dropdownActive).siblings().removeClass(this.constants.classes.dropdownActive);
-	      this.options.pageSize = $this.text().toUpperCase() === this.options.formatAllRows().toUpperCase() ? this.options.formatAllRows() : +$this.text();
-	      this.$toolbar.find('.page-size').text(this.options.pageSize);
-	      this.updatePagination(event);
-	      return false;
-	    }
-	  }, {
-	    key: "onPagePre",
-	    value: function onPagePre(event) {
-	      event.preventDefault();
-
-	      if (this.options.pageNumber - 1 === 0) {
-	        this.options.pageNumber = this.options.totalPages;
-	      } else {
-	        this.options.pageNumber--;
-	      }
-
-	      this.updatePagination(event);
-	      return false;
-	    }
-	  }, {
-	    key: "onPageNext",
-	    value: function onPageNext(event) {
-	      event.preventDefault();
-
-	      if (this.options.pageNumber + 1 > this.options.totalPages) {
-	        this.options.pageNumber = 1;
-	      } else {
-	        this.options.pageNumber++;
-	      }
-
-	      this.updatePagination(event);
-	      return false;
-	    }
-	  }, {
-	    key: "onPageNumber",
-	    value: function onPageNumber(event) {
-	      event.preventDefault();
-
-	      if (this.options.pageNumber === +$(event.currentTarget).text()) {
-	        return;
-	      }
-
-	      this.options.pageNumber = +$(event.currentTarget).text();
-	      this.updatePagination(event);
-	      return false;
-	    }
-	  }, {
-	    key: "initRow",
-	    value: function initRow(item, i, data, trFragments) {
-	      var _this7 = this;
-
-	      var html = [];
-	      var style = {};
-	      var csses = [];
-	      var data_ = '';
-	      var attributes = {};
-	      var htmlAttributes = [];
-
-	      if (Utils.findIndex(this.hiddenRows, item) > -1) {
-	        return;
-	      }
-
-	      style = Utils.calculateObjectValue(this.options, this.options.rowStyle, [item, i], style);
-
-	      if (style && style.css) {
-	        for (var _i2 = 0, _Object$entries = Object.entries(style.css); _i2 < _Object$entries.length; _i2++) {
-	          var _Object$entries$_i = _slicedToArray(_Object$entries[_i2], 2),
-	              key = _Object$entries$_i[0],
-	              value = _Object$entries$_i[1];
-
-	          csses.push("".concat(key, ": ").concat(value));
-	        }
-	      }
-
-	      attributes = Utils.calculateObjectValue(this.options, this.options.rowAttributes, [item, i], attributes);
-
-	      if (attributes) {
-	        for (var _i3 = 0, _Object$entries2 = Object.entries(attributes); _i3 < _Object$entries2.length; _i3++) {
-	          var _Object$entries2$_i = _slicedToArray(_Object$entries2[_i3], 2),
-	              key = _Object$entries2$_i[0],
-	              value = _Object$entries2$_i[1];
-
-	          htmlAttributes.push("".concat(key, "=\"").concat(Utils.escapeHTML(value), "\""));
-	        }
-	      }
-
-	      if (item._data && !Utils.isEmptyObject(item._data)) {
-	        for (var _i4 = 0, _Object$entries3 = Object.entries(item._data); _i4 < _Object$entries3.length; _i4++) {
-	          var _Object$entries3$_i = _slicedToArray(_Object$entries3[_i4], 2),
-	              k = _Object$entries3$_i[0],
-	              v = _Object$entries3$_i[1];
-
-	          // ignore data-index
-	          if (k === 'index') {
+	        if (typeof column.fieldIndex !== 'undefined') {
+	          _this2.header.fields[column.fieldIndex] = column.field;
+	          _this2.header.styles[column.fieldIndex] = align + style;
+	          _this2.header.classes[column.fieldIndex] = class_;
+	          _this2.header.formatters[column.fieldIndex] = column.formatter;
+	          _this2.header.detailFormatters[column.fieldIndex] = column.detailFormatter;
+	          _this2.header.events[column.fieldIndex] = column.events;
+	          _this2.header.sorters[column.fieldIndex] = column.sorter;
+	          _this2.header.sortNames[column.fieldIndex] = column.sortName;
+	          _this2.header.cellStyles[column.fieldIndex] = column.cellStyle;
+	          _this2.header.searchables[column.fieldIndex] = column.searchable;
+
+	          if (!column.visible) {
 	            return;
 	          }
 
-	          data_ += " data-".concat(k, "='").concat(_typeof(v) === 'object' ? JSON.stringify(v) : v, "'");
-	        }
-	      }
-
-	      html.push('<tr', Utils.sprintf(' %s', htmlAttributes.length ? htmlAttributes.join(' ') : undefined), Utils.sprintf(' id="%s"', Array.isArray(item) ? undefined : item._id), Utils.sprintf(' class="%s"', style.classes || (Array.isArray(item) ? undefined : item._class)), " data-index=\"".concat(i, "\""), Utils.sprintf(' data-uniqueid="%s"', Utils.getItemField(item, this.options.uniqueId, false)), Utils.sprintf(' data-has-detail-view="%s"', !this.options.cardView && this.options.detailView && Utils.calculateObjectValue(null, this.options.detailFilter, [i, item]) ? 'true' : undefined), Utils.sprintf('%s', data_), '>');
-
-	      if (this.options.cardView) {
-	        html.push("<td colspan=\"".concat(this.header.fields.length, "\"><div class=\"card-views\">"));
-	      }
-
-	      if (!this.options.cardView && this.options.detailView && this.options.detailViewIcon) {
-	        html.push('<td>');
-
-	        if (Utils.calculateObjectValue(null, this.options.detailFilter, [i, item])) {
-	          html.push("\n          <a class=\"detail-icon\" href=\"#\">\n          ".concat(Utils.sprintf(this.constants.html.icon, this.options.iconsPrefix, this.options.icons.detailOpen), "\n          </a>\n        "));
-	        }
-
-	        html.push('</td>');
-	      }
-
-	      this.header.fields.forEach(function (field, j) {
-	        var text = '';
-	        var value_ = Utils.getItemField(item, field, _this7.options.escape);
-	        var value = '';
-	        var type = '';
-	        var cellStyle = {};
-	        var id_ = '';
-	        var class_ = _this7.header.classes[j];
-	        var style_ = '';
-	        var data_ = '';
-	        var rowspan_ = '';
-	        var colspan_ = '';
-	        var title_ = '';
-	        var column = _this7.columns[j];
-
-	        if (_this7.fromHtml && typeof value_ === 'undefined') {
-	          if (!column.checkbox && !column.radio) {
+	          if (_this2.options.cardView && !column.cardVisible) {
 	            return;
 	          }
+
+	          visibleColumns[column.field] = column;
 	        }
 
-	        if (!column.visible) {
-	          return;
-	        }
+	        html.push("<th" + Utils.sprintf(' title="%s"', column.titleTooltip), column.checkbox || column.radio ? Utils.sprintf(' class="bs-checkbox %s"', column['class'] || '') : class_, Utils.sprintf(' style="%s"', halign + style), Utils.sprintf(' rowspan="%s"', column.rowspan), Utils.sprintf(' colspan="%s"', column.colspan), Utils.sprintf(' data-field="%s"', column.field), // If `column` is not the first element of `this.options.columns[0]`, then className 'data-not-first-th' should be added.
+	        j === 0 && i > 0 ? ' data-not-first-th' : '', '>');
+	        html.push(Utils.sprintf('<div class="th-inner %s">', _this2.options.sortable && column.sortable ? 'sortable both' : ''));
+	        var text = _this2.options.escape ? Utils.escapeHTML(column.title) : column.title;
+	        var title = text;
 
-	        if (_this7.options.cardView && !column.cardVisible) {
-	          return;
-	        }
+	        if (column.checkbox) {
+	          text = '';
 
-	        if (column.escape) {
-	          value_ = Utils.escapeHTML(value_);
-	        }
-
-	        if (csses.concat([_this7.header.styles[j]]).length) {
-	          style_ = " style=\"".concat(csses.concat([_this7.header.styles[j]]).join('; '), "\"");
-	        } // handle td's id and class
-
-
-	        if (item["_".concat(field, "_id")]) {
-	          id_ = Utils.sprintf(' id="%s"', item["_".concat(field, "_id")]);
-	        }
-
-	        if (item["_".concat(field, "_class")]) {
-	          class_ = Utils.sprintf(' class="%s"', item["_".concat(field, "_class")]);
-	        }
-
-	        if (item["_".concat(field, "_rowspan")]) {
-	          rowspan_ = Utils.sprintf(' rowspan="%s"', item["_".concat(field, "_rowspan")]);
-	        }
-
-	        if (item["_".concat(field, "_colspan")]) {
-	          colspan_ = Utils.sprintf(' colspan="%s"', item["_".concat(field, "_colspan")]);
-	        }
-
-	        if (item["_".concat(field, "_title")]) {
-	          title_ = Utils.sprintf(' title="%s"', item["_".concat(field, "_title")]);
-	        }
-
-	        cellStyle = Utils.calculateObjectValue(_this7.header, _this7.header.cellStyles[j], [value_, item, i, field], cellStyle);
-
-	        if (cellStyle.classes) {
-	          class_ = " class=\"".concat(cellStyle.classes, "\"");
-	        }
-
-	        if (cellStyle.css) {
-	          var csses_ = [];
-
-	          for (var _i5 = 0, _Object$entries4 = Object.entries(cellStyle.css); _i5 < _Object$entries4.length; _i5++) {
-	            var _Object$entries4$_i = _slicedToArray(_Object$entries4[_i5], 2),
-	                key = _Object$entries4$_i[0],
-	                _value = _Object$entries4$_i[1];
-
-	            csses_.push("".concat(key, ": ").concat(_value));
+	          if (!_this2.options.singleSelect && _this2.options.checkboxHeader) {
+	            text = '<label><input name="btSelectAll" type="checkbox" /><span></span></label>';
 	          }
 
-	          style_ = " style=\"".concat(csses_.concat(_this7.header.styles[j]).join('; '), "\"");
+	          _this2.header.stateField = column.field;
 	        }
 
-	        value = Utils.calculateObjectValue(column, _this7.header.formatters[j], [value_, item, i, field], value_);
-
-	        if (item["_".concat(field, "_data")] && !Utils.isEmptyObject(item["_".concat(field, "_data")])) {
-	          for (var _i6 = 0, _Object$entries5 = Object.entries(item["_".concat(field, "_data")]); _i6 < _Object$entries5.length; _i6++) {
-	            var _Object$entries5$_i = _slicedToArray(_Object$entries5[_i6], 2),
-	                k = _Object$entries5$_i[0],
-	                v = _Object$entries5$_i[1];
-
-	            // ignore data-index
-	            if (k === 'index') {
-	              return;
-	            }
-
-	            data_ += " data-".concat(k, "=\"").concat(v, "\"");
-	          }
+	        if (column.radio) {
+	          text = '';
+	          _this2.header.stateField = column.field;
+	          _this2.options.singleSelect = true;
 	        }
 
-	        if (column.checkbox || column.radio) {
-	          type = column.checkbox ? 'checkbox' : type;
-	          type = column.radio ? 'radio' : type;
-	          var c = column['class'] || '';
-	          var isChecked = (value === true || value_ || value && value.checked) && value !== false;
-	          var isDisabled = !column.checkboxEnabled || value && value.disabled;
-	          text = [_this7.options.cardView ? "<div class=\"card-view ".concat(c, "\">") : "<td class=\"bs-checkbox ".concat(c, "\"").concat(class_).concat(style_, ">"), "<label>\n            <input\n            data-index=\"".concat(i, "\"\n            name=\"").concat(_this7.options.selectItemName, "\"\n            type=\"").concat(type, "\"\n            ").concat(Utils.sprintf('value="%s"', item[_this7.options.idField]), "\n            ").concat(Utils.sprintf('checked="%s"', isChecked ? 'checked' : undefined), "\n            ").concat(Utils.sprintf('disabled="%s"', isDisabled ? 'disabled' : undefined), " />\n            <span></span>\n            </label>"), _this7.header.formatters[j] && typeof value === 'string' ? value : '', _this7.options.cardView ? '</div>' : '</td>'].join('');
-	          item[_this7.header.stateField] = value === true || !!value_ || value && value.checked;
-	        } else {
-	          value = typeof value === 'undefined' || value === null ? _this7.options.undefinedText : value;
-
-	          if (_this7.options.cardView) {
-	            var cardTitle = _this7.options.showHeader ? "<span class=\"card-view-title\"".concat(style_, ">").concat(Utils.getFieldTitle(_this7.columns, field), "</span>") : '';
-	            text = "<div class=\"card-view\">".concat(cardTitle, "<span class=\"card-view-value\">").concat(value, "</span></div>");
-
-	            if (_this7.options.smartDisplay && value === '') {
-	              text = '<div class="card-view"></div>';
-	            }
-	          } else {
-	            text = "<td".concat(id_).concat(class_).concat(style_).concat(data_).concat(rowspan_).concat(colspan_).concat(title_, ">").concat(value, "</td>");
-	          }
+	        if (!text && column.showSelectTitle) {
+	          text += title;
 	        }
 
 	        html.push(text);
+	        html.push('</div>');
+	        html.push('<div class="fht-cell"></div>');
+	        html.push('</div>');
+	        html.push('</th>');
 	      });
-
-	      if (this.options.cardView) {
-	        html.push('</div></td>');
-	      }
-
 	      html.push('</tr>');
-	      return html.join('');
-	    }
-	  }, {
-	    key: "initBody",
-	    value: function initBody(fixedScroll) {
-	      var _this8 = this;
-
-	      var data = this.getData();
-	      this.trigger('pre-body', data);
-	      this.$body = this.$el.find('>tbody');
-
-	      if (!this.$body.length) {
-	        this.$body = $('<tbody></tbody>').appendTo(this.$el);
-	      } // Fix #389 Bootstrap-table-flatJSON is not working
-
-
-	      if (!this.options.pagination || this.options.sidePagination === 'server') {
-	        this.pageFrom = 1;
-	        this.pageTo = data.length;
-	      }
-
-	      var rows = [];
-	      var trFragments = $(document.createDocumentFragment());
-	      var hasTr = false;
-
-	      for (var i = this.pageFrom - 1; i < this.pageTo; i++) {
-	        var item = data[i];
-	        var tr = this.initRow(item, i, data, trFragments);
-	        hasTr = hasTr || !!tr;
-
-	        if (tr && typeof tr === 'string') {
-	          if (!this.options.virtualScroll) {
-	            trFragments.append(tr);
-	          } else {
-	            rows.push(tr);
-	          }
-	        }
-	      } // show no records
-
-
-	      if (!hasTr) {
-	        this.$body.html("<tr class=\"no-records-found\">".concat(Utils.sprintf('<td colspan="%s">%s</td>', this.$header.find('th').length, this.options.formatNoMatches()), "</tr>"));
-	      } else {
-	        if (!this.options.virtualScroll) {
-	          this.$body.html(trFragments);
-	        } else {
-	          if (this.virtualScroll) {
-	            this.virtualScroll.destroy();
-	          }
-
-	          this.virtualScroll = new VirtualScroll({
-	            rows: rows,
-	            fixedScroll: fixedScroll,
-	            scrollEl: this.$tableBody[0],
-	            contentEl: this.$body[0],
-	            itemHeight: this.options.virtualScrollItemHeight,
-	            callback: function callback() {
-	              _this8.fitHeader();
-
-	              _this8.initBodyEvent();
-	            }
-	          });
-	        }
-	      }
-
-	      if (!fixedScroll) {
-	        this.scrollTo(0);
-	      }
-
-	      this.initBodyEvent();
-	      this.updateSelected();
-	      this.initFooter();
-	      this.resetView();
-
-	      if (this.options.sidePagination !== 'server') {
-	        this.options.totalRows = data.length;
-	      }
-
-	      this.trigger('post-body', data);
-	    }
-	  }, {
-	    key: "initBodyEvent",
-	    value: function initBodyEvent() {
-	      var _this9 = this;
-
-	      // click to select by column
-	      this.$body.find('> tr[data-index] > td').off('click dblclick').on('click dblclick', function (e) {
-	        var $td = $(e.currentTarget);
-	        var $tr = $td.parent();
-	        var $cardViewArr = $(e.target).parents('.card-views').children();
-	        var $cardViewTarget = $(e.target).parents('.card-view');
-	        var rowIndex = $tr.data('index');
-	        var item = _this9.data[rowIndex];
-	        var index = _this9.options.cardView ? $cardViewArr.index($cardViewTarget) : $td[0].cellIndex;
-
-	        var fields = _this9.getVisibleFields();
-
-	        var field = fields[_this9.options.detailView && _this9.options.detailViewIcon && !_this9.options.cardView ? index - 1 : index];
-	        var column = _this9.columns[_this9.fieldsColumnsIndex[field]];
-	        var value = Utils.getItemField(item, field, _this9.options.escape);
-
-	        if ($td.find('.detail-icon').length) {
-	          return;
-	        }
-
-	        _this9.trigger(e.type === 'click' ? 'click-cell' : 'dbl-click-cell', field, value, item, $td);
-
-	        _this9.trigger(e.type === 'click' ? 'click-row' : 'dbl-click-row', item, $tr, field); // if click to select - then trigger the checkbox/radio click
-
-
-	        if (e.type === 'click' && _this9.options.clickToSelect && column.clickToSelect && !Utils.calculateObjectValue(_this9.options, _this9.options.ignoreClickToSelectOn, [e.target])) {
-	          var $selectItem = $tr.find(Utils.sprintf('[name="%s"]', _this9.options.selectItemName));
-
-	          if ($selectItem.length) {
-	            $selectItem[0].click();
-	          }
-	        }
-
-	        if (e.type === 'click' && _this9.options.detailViewByClick) {
-	          _this9.toggleDetailView(rowIndex, _this9.header.detailFormatters[_this9.fieldsColumnsIndex[field]]);
-	        }
-	      }).off('mousedown').on('mousedown', function (e) {
-	        // https://github.com/jquery/jquery/issues/1741
-	        _this9.multipleSelectRowCtrlKey = e.ctrlKey || e.metaKey;
-	        _this9.multipleSelectRowShiftKey = e.shiftKey;
-	      });
-	      this.$body.find('> tr[data-index] > td > .detail-icon').off('click').on('click', function (e) {
-	        e.preventDefault();
-
-	        _this9.toggleDetailView($(e.currentTarget).parent().parent().data('index'));
-
-	        return false;
-	      });
-	      this.$selectItem = this.$body.find(Utils.sprintf('[name="%s"]', this.options.selectItemName));
-	      this.$selectItem.off('click').on('click', function (e) {
-	        e.stopImmediatePropagation();
-	        var $this = $(e.currentTarget);
-
-	        _this9._toggleCheck($this.prop('checked'), $this.data('index'));
-	      });
-	      this.header.events.forEach(function (_events, i) {
-	        var events = _events;
-
-	        if (!events) {
-	          return;
-	        } // fix bug, if events is defined with namespace
-
-
-	        if (typeof events === 'string') {
-	          events = Utils.calculateObjectValue(null, events);
-	        }
-
-	        var field = _this9.header.fields[i];
-
-	        var fieldIndex = _this9.getVisibleFields().indexOf(field);
-
-	        if (fieldIndex === -1) {
-	          return;
-	        }
-
-	        if (_this9.options.detailView && !_this9.options.cardView) {
-	          fieldIndex += 1;
-	        }
-
-	        var _loop = function _loop(key) {
-	          if (!events.hasOwnProperty(key)) {
-	            return "continue";
-	          }
-
-	          var event = events[key];
-
-	          _this9.$body.find('>tr:not(.no-records-found)').each(function (i, tr) {
-	            var $tr = $(tr);
-	            var $td = $tr.find(_this9.options.cardView ? '.card-views>.card-view' : '>td').eq(fieldIndex);
-	            var index = key.indexOf(' ');
-	            var name = key.substring(0, index);
-	            var el = key.substring(index + 1);
-	            $td.find(el).off(name).on(name, function (e) {
-	              var index = $tr.data('index');
-	              var row = _this9.data[index];
-	              var value = row[field];
-	              event.apply(_this9, [e, value, row, index]);
-	            });
-	          });
-	        };
-
-	        for (var key in events) {
-	          var _ret = _loop(key);
-
-	          if (_ret === "continue") continue;
-	        }
-	      });
-	    }
-	  }, {
-	    key: "initServer",
-	    value: function initServer(silent, query, url) {
-	      var _this10 = this;
-
-	      var data = {};
-	      var index = this.header.fields.indexOf(this.options.sortName);
-	      var params = {
-	        searchText: this.searchText,
-	        sortName: this.options.sortName,
-	        sortOrder: this.options.sortOrder
-	      };
-
-	      if (this.header.sortNames[index]) {
-	        params.sortName = this.header.sortNames[index];
-	      }
-
-	      if (this.options.pagination && this.options.sidePagination === 'server') {
-	        params.pageSize = this.options.pageSize === this.options.formatAllRows() ? this.options.totalRows : this.options.pageSize;
-	        params.pageNumber = this.options.pageNumber;
-	      }
-
-	      if (!(url || this.options.url) && !this.options.ajax) {
-	        return;
-	      }
-
-	      if (this.options.queryParamsType === 'limit') {
-	        params = {
-	          search: params.searchText,
-	          sort: params.sortName,
-	          order: params.sortOrder
-	        };
-
-	        if (this.options.pagination && this.options.sidePagination === 'server') {
-	          params.offset = this.options.pageSize === this.options.formatAllRows() ? 0 : this.options.pageSize * (this.options.pageNumber - 1);
-	          params.limit = this.options.pageSize === this.options.formatAllRows() ? this.options.totalRows : this.options.pageSize;
-
-	          if (params.limit === 0) {
-	            delete params.limit;
-	          }
-	        }
-	      }
-
-	      if (!Utils.isEmptyObject(this.filterColumnsPartial)) {
-	        params.filter = JSON.stringify(this.filterColumnsPartial, null);
-	      }
-
-	      $.extend(params, query || {});
-	      data = Utils.calculateObjectValue(this.options, this.options.queryParams, [params], data); // false to stop request
-
-	      if (data === false) {
-	        return;
-	      }
-
-	      if (!silent) {
-	        this.showLoading();
-	      }
-
-	      var request = $.extend({}, Utils.calculateObjectValue(null, this.options.ajaxOptions), {
-	        type: this.options.method,
-	        url: url || this.options.url,
-	        data: this.options.contentType === 'application/json' && this.options.method === 'post' ? JSON.stringify(data) : data,
-	        cache: this.options.cache,
-	        contentType: this.options.contentType,
-	        dataType: this.options.dataType,
-	        success: function success(_res, textStatus, jqXHR) {
-	          var res = Utils.calculateObjectValue(_this10.options, _this10.options.responseHandler, [_res, jqXHR], _res);
-
-	          _this10.load(res);
-
-	          _this10.trigger('load-success', res, jqXHR.status, jqXHR);
-
-	          if (!silent) {
-	            _this10.hideLoading();
-	          }
-	        },
-	        error: function error(jqXHR) {
-	          var data = [];
-
-	          if (_this10.options.sidePagination === 'server') {
-	            data = {};
-	            data[_this10.options.totalField] = 0;
-	            data[_this10.options.dataField] = [];
-	          }
-
-	          _this10.load(data);
-
-	          _this10.trigger('load-error', jqXHR.status, jqXHR);
-
-	          if (!silent) _this10.$tableLoading.hide();
-	        }
-	      });
-
-	      if (this.options.ajax) {
-	        Utils.calculateObjectValue(this, this.options.ajax, [request], null);
-	      } else {
-	        if (this._xhr && this._xhr.readyState !== 4) {
-	          this._xhr.abort();
-	        }
-
-	        this._xhr = $.ajax(request);
-	      }
-
-	      return data;
-	    }
-	  }, {
-	    key: "initSearchText",
-	    value: function initSearchText() {
-	      if (this.options.search) {
-	        this.searchText = '';
-
-	        if (this.options.searchText !== '') {
-	          var $search = this.$toolbar.find('.search input');
-	          $search.val(this.options.searchText);
-	          this.onSearch({
-	            currentTarget: $search,
-	            firedByInitSearchText: true
-	          });
-	        }
-	      }
-	    }
-	  }, {
-	    key: "getCaret",
-	    value: function getCaret() {
-	      var _this11 = this;
-
-	      this.$header.find('th').each(function (i, th) {
-	        $(th).find('.sortable').removeClass('desc asc').addClass($(th).data('field') === _this11.options.sortName ? _this11.options.sortOrder : 'both');
-	      });
-	    }
-	  }, {
-	    key: "updateSelected",
-	    value: function updateSelected() {
-	      var checkAll = this.$selectItem.filter(':enabled').length && this.$selectItem.filter(':enabled').length === this.$selectItem.filter(':enabled').filter(':checked').length;
-	      this.$selectAll.add(this.$selectAll_).prop('checked', checkAll);
-	      this.$selectItem.each(function (i, el) {
-	        $(el).closest('tr')[$(el).prop('checked') ? 'addClass' : 'removeClass']('selected');
-	      });
-	    }
-	  }, {
-	    key: "updateRows",
-	    value: function updateRows() {
-	      var _this12 = this;
-
-	      this.$selectItem.each(function (i, el) {
-	        _this12.data[$(el).data('index')][_this12.header.stateField] = $(el).prop('checked');
-	      });
-	    }
-	  }, {
-	    key: "resetRows",
-	    value: function resetRows() {
-	      var _iteratorNormalCompletion2 = true;
-	      var _didIteratorError2 = false;
-	      var _iteratorError2 = undefined;
-
-	      try {
-	        for (var _iterator2 = this.data[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-	          var row = _step2.value;
-	          this.$selectAll.prop('checked', false);
-	          this.$selectItem.prop('checked', false);
-
-	          if (this.header.stateField) {
-	            row[this.header.stateField] = false;
-	          }
-	        }
-	      } catch (err) {
-	        _didIteratorError2 = true;
-	        _iteratorError2 = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion2 && _iterator2.return != null) {
-	            _iterator2.return();
-	          }
-	        } finally {
-	          if (_didIteratorError2) {
-	            throw _iteratorError2;
-	          }
-	        }
-	      }
-
-	      this.initHiddenRows();
-	    }
-	  }, {
-	    key: "trigger",
-	    value: function trigger(_name) {
-	      var _this$options;
-
-	      var name = "".concat(_name, ".bs.table");
-
-	      for (var _len = arguments.length, args = new Array(_len > 1 ? _len - 1 : 0), _key2 = 1; _key2 < _len; _key2++) {
-	        args[_key2 - 1] = arguments[_key2];
-	      }
-
-	      (_this$options = this.options)[BootstrapTable.EVENTS[name]].apply(_this$options, args);
-
-	      this.$el.trigger($.Event(name), args);
-	      this.options.onAll(name, args);
-	      this.$el.trigger($.Event('all.bs.table'), [name, args]);
-	    }
-	  }, {
-	    key: "resetHeader",
-	    value: function resetHeader() {
-	      var _this13 = this;
-
-	      // fix #61: the hidden table reset header bug.
-	      // fix bug: get $el.css('width') error sometime (height = 500)
-	      clearTimeout(this.timeoutId_);
-	      this.timeoutId_ = setTimeout(function () {
-	        return _this13.fitHeader();
-	      }, this.$el.is(':hidden') ? 100 : 0);
-	    }
-	  }, {
-	    key: "fitHeader",
-	    value: function fitHeader() {
-	      var _this14 = this;
-
-	      if (this.$el.is(':hidden')) {
-	        this.timeoutId_ = setTimeout(function () {
-	          return _this14.fitHeader();
-	        }, 100);
-	        return;
-	      }
-
-	      var fixedBody = this.$tableBody.get(0);
-	      var scrollWidth = fixedBody.scrollWidth > fixedBody.clientWidth && fixedBody.scrollHeight > fixedBody.clientHeight + this.$header.outerHeight() ? Utils.getScrollBarWidth() : 0;
-	      this.$el.css('margin-top', -this.$header.outerHeight());
-	      var focused = $(':focus');
-
-	      if (focused.length > 0) {
-	        var $th = focused.parents('th');
-
-	        if ($th.length > 0) {
-	          var dataField = $th.attr('data-field');
-
-	          if (dataField !== undefined) {
-	            var $headerTh = this.$header.find("[data-field='".concat(dataField, "']"));
-
-	            if ($headerTh.length > 0) {
-	              $headerTh.find(':input').addClass('focus-temp');
-	            }
-	          }
-	        }
-	      }
-
-	      this.$header_ = this.$header.clone(true, true);
-	      this.$selectAll_ = this.$header_.find('[name="btSelectAll"]');
-	      this.$tableHeader.css('margin-right', scrollWidth).find('table').css('width', this.$el.outerWidth()).html('').attr('class', this.$el.attr('class')).append(this.$header_);
-	      this.$tableLoading.css('width', this.$el.outerWidth());
-	      var focusedTemp = $('.focus-temp:visible:eq(0)');
-
-	      if (focusedTemp.length > 0) {
-	        focusedTemp.focus();
-	        this.$header.find('.focus-temp').removeClass('focus-temp');
-	      } // fix bug: $.data() is not working as expected after $.append()
-
-
-	      this.$header.find('th[data-field]').each(function (i, el) {
-	        _this14.$header_.find(Utils.sprintf('th[data-field="%s"]', $(el).data('field'))).data($(el).data());
-	      });
-	      var visibleFields = this.getVisibleFields();
-	      var $ths = this.$header_.find('th');
-	      var $tr = this.$body.find('>tr:not(.no-records-found,.virtual-scroll-top)').eq(0);
-
-	      while ($tr.length && $tr.find('>td[colspan]:not([colspan="1"])').length) {
-	        $tr = $tr.next();
-	      }
-
-	      $tr.find('> *').each(function (i, el) {
-	        var $this = $(el);
-	        var index = i;
-
-	        if (_this14.options.detailView && _this14.options.detailViewIcon && !_this14.options.cardView) {
-	          if (i === 0) {
-	            var $thDetail = $ths.filter('.detail');
-
-	            var _zoomWidth = $thDetail.innerWidth() - $thDetail.find('.fht-cell').width();
-
-	            $thDetail.find('.fht-cell').width($this.innerWidth() - _zoomWidth);
-	          }
-
-	          index = i - 1;
-	        }
-
-	        if (index === -1) {
-	          return;
-	        }
-
-	        var $th = _this14.$header_.find(Utils.sprintf('th[data-field="%s"]', visibleFields[index]));
-
-	        if ($th.length > 1) {
-	          $th = $($ths[$this[0].cellIndex]);
-	        }
-
-	        var zoomWidth = $th.innerWidth() - $th.find('.fht-cell').width();
-	        $th.find('.fht-cell').width($this.innerWidth() - zoomWidth);
-	      });
-	      this.horizontalScroll();
-	      this.trigger('post-header');
-	    }
-	  }, {
-	    key: "initFooter",
-	    value: function initFooter() {
-	      if (!this.options.showFooter || this.options.cardView) {
-	        // do nothing
-	        return;
-	      }
-
-	      var data = this.getData();
-	      var html = [];
-
-	      if (!this.options.cardView && this.options.detailView && this.options.detailViewIcon) {
-	        html.push('<th class="detail"><div class="th-inner"></div><div class="fht-cell"></div></th>');
-	      }
-
-	      var _iteratorNormalCompletion3 = true;
-	      var _didIteratorError3 = false;
-	      var _iteratorError3 = undefined;
-
-	      try {
-	        for (var _iterator3 = this.columns[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-	          var column = _step3.value;
-	          var falign = '';
-	          var valign = '';
-	          var csses = [];
-	          var style = {};
-	          var class_ = Utils.sprintf(' class="%s"', column['class']);
-
-	          if (!column.visible) {
-	            continue;
-	          }
-
-	          if (this.options.cardView && !column.cardVisible) {
-	            return;
-	          }
-
-	          falign = Utils.sprintf('text-align: %s; ', column.falign ? column.falign : column.align);
-	          valign = Utils.sprintf('vertical-align: %s; ', column.valign);
-	          style = Utils.calculateObjectValue(null, this.options.footerStyle, [column]);
-
-	          if (style && style.css) {
-	            for (var _i7 = 0, _Object$entries6 = Object.entries(style.css); _i7 < _Object$entries6.length; _i7++) {
-	              var _Object$entries6$_i = _slicedToArray(_Object$entries6[_i7], 2),
-	                  key = _Object$entries6$_i[0],
-	                  value = _Object$entries6$_i[1];
-
-	              csses.push("".concat(key, ": ").concat(value));
-	            }
-	          }
-
-	          if (style && style.classes) {
-	            class_ = Utils.sprintf(' class="%s"', column['class'] ? [column['class'], style.classes].join(' ') : style.classes);
-	          }
-
-	          html.push('<th', class_, Utils.sprintf(' style="%s"', falign + valign + csses.concat().join('; ')), '>');
-	          html.push('<div class="th-inner">');
-	          html.push(Utils.calculateObjectValue(column, column.footerFormatter, [data], this.footerData[0] && this.footerData[0][column.field] || ''));
-	          html.push('</div>');
-	          html.push('<div class="fht-cell"></div>');
-	          html.push('</div>');
-	          html.push('</th>');
-	        }
-	      } catch (err) {
-	        _didIteratorError3 = true;
-	        _iteratorError3 = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion3 && _iterator3.return != null) {
-	            _iterator3.return();
-	          }
-	        } finally {
-	          if (_didIteratorError3) {
-	            throw _iteratorError3;
-	          }
-	        }
-	      }
-
-	      this.$tableFooter.find('tr').html(html.join(''));
-	      this.trigger('post-footer', this.$tableFooter);
-	    }
-	  }, {
-	    key: "fitFooter",
-	    value: function fitFooter() {
-	      var _this15 = this;
-
-	      if (this.$el.is(':hidden')) {
-	        setTimeout(function () {
-	          return _this15.fitFooter();
-	        }, 100);
-	        return;
-	      }
-
-	      var fixedBody = this.$tableBody.get(0);
-	      var scrollWidth = fixedBody.scrollWidth > fixedBody.clientWidth && fixedBody.scrollHeight > fixedBody.clientHeight + this.$header.outerHeight() ? Utils.getScrollBarWidth() : 0;
-	      this.$tableFooter.css('margin-right', scrollWidth).find('table').css('width', this.$el.outerWidth()).attr('class', this.$el.attr('class'));
-	      var visibleFields = this.getVisibleFields();
-	      var $ths = this.$tableFooter.find('th');
-	      var $tr = this.$body.find('>tr:first-child:not(.no-records-found)');
-
-	      while ($tr.length && $tr.find('>td[colspan]:not([colspan="1"])').length) {
-	        $tr = $tr.next();
-	      }
-
-	      $tr.find('> *').each(function (i, el) {
-	        var $this = $(el);
-	        var index = i;
-
-	        if (_this15.options.detailView && !_this15.options.cardView) {
-	          if (i === 0) {
-	            var $thDetail = $ths.filter('.detail');
-
-	            var _zoomWidth2 = $thDetail.innerWidth() - $thDetail.find('.fht-cell').width();
-
-	            $thDetail.find('.fht-cell').width($this.innerWidth() - _zoomWidth2);
-	          }
-
-	          index = i - 1;
-	        }
-
-	        if (index === -1) {
-	          return;
-	        }
-
-	        var $th = $ths.eq(i);
-	        var zoomWidth = $th.innerWidth() - $th.find('.fht-cell').width();
-	        $th.find('.fht-cell').width($this.innerWidth() - zoomWidth);
-	      });
-	      this.horizontalScroll();
-	    }
-	  }, {
-	    key: "horizontalScroll",
-	    value: function horizontalScroll() {
-	      var _this16 = this;
-
-	      // horizontal scroll event
-	      // TODO: it's probably better improving the layout than binding to scroll event
-	      this.$tableBody.off('scroll').on('scroll', function (_ref6) {
-	        var currentTarget = _ref6.currentTarget;
-
-	        if (_this16.options.showHeader && _this16.options.height) {
-	          _this16.$tableHeader.scrollLeft($(currentTarget).scrollLeft());
-	        }
-
-	        if (_this16.options.showFooter && !_this16.options.cardView) {
-	          _this16.$tableFooter.scrollLeft($(currentTarget).scrollLeft());
-	        }
-
-	        _this16.trigger('scroll-body', $(currentTarget));
-	      });
-	    }
-	  }, {
-	    key: "getVisibleFields",
-	    value: function getVisibleFields() {
-	      var visibleFields = [];
-	      var _iteratorNormalCompletion4 = true;
-	      var _didIteratorError4 = false;
-	      var _iteratorError4 = undefined;
-
-	      try {
-	        for (var _iterator4 = this.header.fields[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-	          var field = _step4.value;
-	          var column = this.columns[this.fieldsColumnsIndex[field]];
-
-	          if (!column || !column.visible) {
-	            continue;
-	          }
-
-	          visibleFields.push(field);
-	        }
-	      } catch (err) {
-	        _didIteratorError4 = true;
-	        _iteratorError4 = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion4 && _iterator4.return != null) {
-	            _iterator4.return();
-	          }
-	        } finally {
-	          if (_didIteratorError4) {
-	            throw _iteratorError4;
-	          }
-	        }
-	      }
-
-	      return visibleFields;
-	    }
-	  }, {
-	    key: "initHiddenRows",
-	    value: function initHiddenRows() {
-	      this.hiddenRows = [];
-	    } // PUBLIC FUNCTION DEFINITION
-	    // =======================
-
-	  }, {
-	    key: "getOptions",
-	    value: function getOptions() {
-	      // deep copy and remove data
-	      var options = $.extend({}, this.options);
-	      delete options.data;
-	      return $.extend(true, {}, options);
-	    }
-	  }, {
-	    key: "refreshOptions",
-	    value: function refreshOptions(options) {
-	      // If the objects are equivalent then avoid the call of destroy / init methods
-	      if (Utils.compareObjects(this.options, options, true)) {
-	        return;
-	      }
-
-	      this.options = $.extend(this.options, options);
-	      this.trigger('refresh-options', this.options);
-	      this.destroy();
-	      this.init();
-	    }
-	  }, {
-	    key: "getData",
-	    value: function getData(params) {
-	      var data = this.options.data;
-
-	      if (this.searchText || this.options.sortName || !Utils.isEmptyObject(this.filterColumns) || !Utils.isEmptyObject(this.filterColumnsPartial)) {
-	        data = this.data;
-	      }
-
-	      if (params && params.useCurrentPage) {
-	        data = data.slice(this.pageFrom - 1, this.pageTo);
-	      }
-
-	      if (params && !params.includeHiddenRows) {
-	        var hiddenRows = this.getHiddenRows();
-	        data = data.filter(function (row) {
-	          return Utils.findIndex(hiddenRows, row) === -1;
-	        });
-	      }
-
-	      return data;
-	    }
-	  }, {
-	    key: "getSelections",
-	    value: function getSelections() {
-	      var _this17 = this;
-
-	      // fix #2424: from html with checkbox
-	      return this.data.filter(function (row) {
-	        return row[_this17.header.stateField] === true;
-	      });
-	    }
-	  }, {
-	    key: "getAllSelections",
-	    value: function getAllSelections() {
-	      var _this18 = this;
-
-	      return this.options.data.filter(function (row) {
-	        return row[_this18.header.stateField] === true;
-	      });
-	    }
-	  }, {
-	    key: "load",
-	    value: function load(_data) {
-	      var fixedScroll = false;
-	      var data = _data; // #431: support pagination
-
-	      if (this.options.pagination && this.options.sidePagination === 'server') {
-	        this.options.totalRows = data[this.options.totalField];
-	      }
-
-	      if (this.options.pagination && this.options.sidePagination === 'server') {
-	        this.options.totalNotFiltered = data[this.options.totalNotFilteredField];
-	      }
-
-	      fixedScroll = data.fixedScroll;
-	      data = Array.isArray(data) ? data : data[this.options.dataField];
-	      this.initData(data);
-	      this.initSearch();
-	      this.initPagination();
-	      this.initBody(fixedScroll);
-	    }
-	  }, {
-	    key: "append",
-	    value: function append(data) {
-	      this.initData(data, 'append');
-	      this.initSearch();
-	      this.initPagination();
-	      this.initSort();
-	      this.initBody(true);
-	    }
-	  }, {
-	    key: "prepend",
-	    value: function prepend(data) {
-	      this.initData(data, 'prepend');
-	      this.initSearch();
-	      this.initPagination();
-	      this.initSort();
-	      this.initBody(true);
-	    }
-	  }, {
-	    key: "remove",
-	    value: function remove(params) {
-	      var len = this.options.data.length;
-	      var i;
-	      var row;
-
-	      if (!params.hasOwnProperty('field') || !params.hasOwnProperty('values')) {
-	        return;
-	      }
-
-	      for (i = len - 1; i >= 0; i--) {
-	        row = this.options.data[i];
-
-	        if (!row.hasOwnProperty(params.field)) {
-	          continue;
-	        }
-
-	        if (params.values.includes(row[params.field])) {
-	          this.options.data.splice(i, 1);
-
-	          if (this.options.sidePagination === 'server') {
-	            this.options.totalRows -= 1;
-	          }
-	        }
-	      }
-
-	      if (len === this.options.data.length) {
-	        return;
-	      }
-
-	      this.initSearch();
-	      this.initPagination();
-	      this.initSort();
-	      this.initBody(true);
-	    }
-	  }, {
-	    key: "removeAll",
-	    value: function removeAll() {
-	      if (this.options.data.length > 0) {
-	        this.options.data.splice(0, this.options.data.length);
-	        this.initSearch();
-	        this.initPagination();
-	        this.initBody(true);
-	      }
-	    }
-	  }, {
-	    key: "insertRow",
-	    value: function insertRow(params) {
-	      if (!params.hasOwnProperty('index') || !params.hasOwnProperty('row')) {
-	        return;
-	      }
-
-	      this.options.data.splice(params.index, 0, params.row);
-	      this.initSearch();
-	      this.initPagination();
-	      this.initSort();
-	      this.initBody(true);
-	    }
-	  }, {
-	    key: "updateRow",
-	    value: function updateRow(params) {
-	      var allParams = Array.isArray(params) ? params : [params];
-	      var _iteratorNormalCompletion5 = true;
-	      var _didIteratorError5 = false;
-	      var _iteratorError5 = undefined;
-
-	      try {
-	        for (var _iterator5 = allParams[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
-	          var _params = _step5.value;
-
-	          if (!_params.hasOwnProperty('index') || !_params.hasOwnProperty('row')) {
-	            continue;
-	          }
-
-	          $.extend(this.options.data[_params.index], _params.row);
-
-	          if (_params.hasOwnProperty('replace') && _params.replace) {
-	            this.options.data[_params.index] = _params.row;
-	          } else {
-	            $.extend(this.options.data[_params.index], _params.row);
-	          }
-	        }
-	      } catch (err) {
-	        _didIteratorError5 = true;
-	        _iteratorError5 = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion5 && _iterator5.return != null) {
-	            _iterator5.return();
-	          }
-	        } finally {
-	          if (_didIteratorError5) {
-	            throw _iteratorError5;
-	          }
-	        }
-	      }
-
-	      this.initSearch();
-	      this.initPagination();
-	      this.initSort();
-	      this.initBody(true);
-	    }
-	  }, {
-	    key: "getRowByUniqueId",
-	    value: function getRowByUniqueId(_id) {
-	      var uniqueId = this.options.uniqueId;
-	      var len = this.options.data.length;
-	      var id = _id;
-	      var dataRow = null;
-	      var i;
-	      var row;
-	      var rowUniqueId;
-
-	      for (i = len - 1; i >= 0; i--) {
-	        row = this.options.data[i];
-
-	        if (row.hasOwnProperty(uniqueId)) {
-	          // uniqueId is a column
-	          rowUniqueId = row[uniqueId];
-	        } else if (row._data && row._data.hasOwnProperty(uniqueId)) {
-	          // uniqueId is a row data property
-	          rowUniqueId = row._data[uniqueId];
-	        } else {
-	          continue;
-	        }
-
-	        if (typeof rowUniqueId === 'string') {
-	          id = id.toString();
-	        } else if (typeof rowUniqueId === 'number') {
-	          if (Number(rowUniqueId) === rowUniqueId && rowUniqueId % 1 === 0) {
-	            id = parseInt(id);
-	          } else if (rowUniqueId === Number(rowUniqueId) && rowUniqueId !== 0) {
-	            id = parseFloat(id);
-	          }
-	        }
-
-	        if (rowUniqueId === id) {
-	          dataRow = row;
-	          break;
-	        }
-	      }
-
-	      return dataRow;
-	    }
-	  }, {
-	    key: "updateByUniqueId",
-	    value: function updateByUniqueId(params) {
-	      var allParams = Array.isArray(params) ? params : [params];
-	      var _iteratorNormalCompletion6 = true;
-	      var _didIteratorError6 = false;
-	      var _iteratorError6 = undefined;
-
-	      try {
-	        for (var _iterator6 = allParams[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
-	          var _params2 = _step6.value;
-
-	          if (!_params2.hasOwnProperty('id') || !_params2.hasOwnProperty('row')) {
-	            continue;
-	          }
-
-	          var rowId = this.options.data.indexOf(this.getRowByUniqueId(_params2.id));
-
-	          if (rowId === -1) {
-	            continue;
-	          }
-
-	          if (_params2.hasOwnProperty('replace') && _params2.replace) {
-	            this.options.data[rowId] = _params2.row;
-	          } else {
-	            $.extend(this.options.data[rowId], _params2.row);
-	          }
-	        }
-	      } catch (err) {
-	        _didIteratorError6 = true;
-	        _iteratorError6 = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion6 && _iterator6.return != null) {
-	            _iterator6.return();
-	          }
-	        } finally {
-	          if (_didIteratorError6) {
-	            throw _iteratorError6;
-	          }
-	        }
-	      }
-
-	      this.initSearch();
-	      this.initPagination();
-	      this.initSort();
-	      this.initBody(true);
-	    }
-	  }, {
-	    key: "removeByUniqueId",
-	    value: function removeByUniqueId(id) {
-	      var len = this.options.data.length;
-	      var row = this.getRowByUniqueId(id);
-
-	      if (row) {
-	        this.options.data.splice(this.options.data.indexOf(row), 1);
-	      }
-
-	      if (len === this.options.data.length) {
-	        return;
-	      }
-
-	      this.initSearch();
-	      this.initPagination();
-	      this.initBody(true);
-	    }
-	  }, {
-	    key: "updateCell",
-	    value: function updateCell(params) {
-	      if (!params.hasOwnProperty('index') || !params.hasOwnProperty('field') || !params.hasOwnProperty('value')) {
-	        return;
-	      }
-
-	      this.data[params.index][params.field] = params.value;
-
-	      if (params.reinit === false) {
-	        return;
-	      }
-
-	      this.initSort();
-	      this.initBody(true);
-	    }
-	  }, {
-	    key: "updateCellByUniqueId",
-	    value: function updateCellByUniqueId(params) {
-	      var _this19 = this;
-
-	      if (!params.hasOwnProperty('id') || !params.hasOwnProperty('field') || !params.hasOwnProperty('value')) {
-	        return;
-	      }
-
-	      var allParams = Array.isArray(params) ? params : [params];
-	      allParams.forEach(function (_ref7) {
-	        var id = _ref7.id,
-	            field = _ref7.field,
-	            value = _ref7.value;
-
-	        var rowId = _this19.options.data.indexOf(_this19.getRowByUniqueId(id));
-
-	        if (rowId === -1) {
-	          return;
-	        }
-
-	        _this19.options.data[rowId][field] = value;
-	      });
-
-	      if (params.reinit === false) {
-	        return;
-	      }
-
-	      this.initSort();
-	      this.initBody(true);
-	    }
-	  }, {
-	    key: "showRow",
-	    value: function showRow(params) {
-	      this._toggleRow(params, true);
-	    }
-	  }, {
-	    key: "hideRow",
-	    value: function hideRow(params) {
-	      this._toggleRow(params, false);
-	    }
-	  }, {
-	    key: "_toggleRow",
-	    value: function _toggleRow(params, visible) {
-	      var row;
-
-	      if (params.hasOwnProperty('index')) {
-	        row = this.getData()[params.index];
-	      } else if (params.hasOwnProperty('uniqueId')) {
-	        row = this.getRowByUniqueId(params.uniqueId);
-	      }
-
-	      if (!row) {
-	        return;
-	      }
-
-	      var index = Utils.findIndex(this.hiddenRows, row);
-
-	      if (!visible && index === -1) {
-	        this.hiddenRows.push(row);
-	      } else if (visible && index > -1) {
-	        this.hiddenRows.splice(index, 1);
-	      }
-
-	      if (visible) {
-	        this.updatePagination();
-	      } else {
-	        this.initBody(true);
-	        this.initPagination();
-	      }
-	    }
-	  }, {
-	    key: "getHiddenRows",
-	    value: function getHiddenRows(show) {
-	      if (show) {
-	        this.initHiddenRows();
-	        this.initBody(true);
-	        return;
-	      }
-
-	      var data = this.getData();
-	      var rows = [];
-	      var _iteratorNormalCompletion7 = true;
-	      var _didIteratorError7 = false;
-	      var _iteratorError7 = undefined;
-
-	      try {
-	        for (var _iterator7 = data[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
-	          var row = _step7.value;
-
-	          if (this.hiddenRows.includes(row)) {
-	            rows.push(row);
-	          }
-	        }
-	      } catch (err) {
-	        _didIteratorError7 = true;
-	        _iteratorError7 = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion7 && _iterator7.return != null) {
-	            _iterator7.return();
-	          }
-	        } finally {
-	          if (_didIteratorError7) {
-	            throw _iteratorError7;
-	          }
-	        }
-	      }
-
-	      this.hiddenRows = rows;
-	      return rows;
-	    }
-	  }, {
-	    key: "showColumn",
-	    value: function showColumn(field) {
-	      var _this20 = this;
-
-	      var fields = Array.isArray(field) ? field : [field];
-	      fields.forEach(function (field) {
-	        _this20._toggleColumn(_this20.fieldsColumnsIndex[field], true, true);
-	      });
-	    }
-	  }, {
-	    key: "hideColumn",
-	    value: function hideColumn(field) {
-	      var _this21 = this;
-
-	      var fields = Array.isArray(field) ? field : [field];
-	      fields.forEach(function (field) {
-	        _this21._toggleColumn(_this21.fieldsColumnsIndex[field], false, true);
-	      });
-	    }
-	  }, {
-	    key: "_toggleColumn",
-	    value: function _toggleColumn(index, checked, needUpdate) {
-	      if (index === -1 || this.columns[index].visible === checked) {
-	        return;
-	      }
-
-	      this.columns[index].visible = checked;
-	      this.initHeader();
-	      this.initSearch();
-	      this.initPagination();
-	      this.initBody();
-
-	      if (this.options.showColumns) {
-	        var $items = this.$toolbar.find('.keep-open input').prop('disabled', false);
-
-	        if (needUpdate) {
-	          $items.filter(Utils.sprintf('[value="%s"]', index)).prop('checked', checked);
-	        }
-
-	        if ($items.filter(':checked').length <= this.options.minimumCountColumns) {
-	          $items.filter(':checked').prop('disabled', true);
-	        }
-	      }
-	    }
-	  }, {
-	    key: "getVisibleColumns",
-	    value: function getVisibleColumns() {
-	      return this.columns.filter(function (_ref8) {
-	        var visible = _ref8.visible;
-	        return visible;
-	      });
-	    }
-	  }, {
-	    key: "getHiddenColumns",
-	    value: function getHiddenColumns() {
-	      return this.columns.filter(function (_ref9) {
-	        var visible = _ref9.visible;
-	        return !visible;
-	      });
-	    }
-	  }, {
-	    key: "showAllColumns",
-	    value: function showAllColumns() {
-	      this._toggleAllColumns(true);
-	    }
-	  }, {
-	    key: "hideAllColumns",
-	    value: function hideAllColumns() {
-	      this._toggleAllColumns(false);
-	    }
-	  }, {
-	    key: "_toggleAllColumns",
-	    value: function _toggleAllColumns(visible) {
-	      var _this22 = this;
-
-	      var _iteratorNormalCompletion8 = true;
-	      var _didIteratorError8 = false;
-	      var _iteratorError8 = undefined;
-
-	      try {
-	        for (var _iterator8 = this.columns.slice().reverse()[Symbol.iterator](), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
-	          var column = _step8.value;
-
-	          if (column.switchable) {
-	            if (!visible && this.options.showColumns && this.getVisibleColumns().length === this.options.minimumCountColumns) {
-	              continue;
-	            }
-
-	            column.visible = visible;
-	          }
-	        }
-	      } catch (err) {
-	        _didIteratorError8 = true;
-	        _iteratorError8 = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion8 && _iterator8.return != null) {
-	            _iterator8.return();
-	          }
-	        } finally {
-	          if (_didIteratorError8) {
-	            throw _iteratorError8;
-	          }
-	        }
-	      }
-
-	      this.initHeader();
-	      this.initSearch();
-	      this.initPagination();
-	      this.initBody();
-
-	      if (this.options.showColumns) {
-	        var $items = this.$toolbar.find('.keep-open input:not(".toggle-all")').prop('disabled', false);
-
-	        if (visible) {
-	          $items.prop('checked', visible);
-	        } else {
-	          $items.get().reverse().forEach(function (item) {
-	            if ($items.filter(':checked').length > _this22.options.minimumCountColumns) {
-	              $(item).prop('checked', visible);
-	            }
-	          });
-	        }
-
-	        if ($items.filter(':checked').length <= this.options.minimumCountColumns) {
-	          $items.filter(':checked').prop('disabled', true);
-	        }
-	      }
-	    }
-	  }, {
-	    key: "mergeCells",
-	    value: function mergeCells(options) {
-	      var row = options.index;
-	      var col = this.getVisibleFields().indexOf(options.field);
-	      var rowspan = options.rowspan || 1;
-	      var colspan = options.colspan || 1;
-	      var i;
-	      var j;
-	      var $tr = this.$body.find('>tr');
-
-	      if (this.options.detailView && !this.options.cardView) {
-	        col += 1;
-	      }
-
-	      var $td = $tr.eq(row).find('>td').eq(col);
-
-	      if (row < 0 || col < 0 || row >= this.data.length) {
-	        return;
-	      }
-
-	      for (i = row; i < row + rowspan; i++) {
-	        for (j = col; j < col + colspan; j++) {
-	          $tr.eq(i).find('>td').eq(j).hide();
-	        }
-	      }
-
-	      $td.attr('rowspan', rowspan).attr('colspan', colspan).show();
-	    }
-	  }, {
-	    key: "checkAll",
-	    value: function checkAll() {
-	      this._toggleCheckAll(true);
-	    }
-	  }, {
-	    key: "uncheckAll",
-	    value: function uncheckAll() {
-	      this._toggleCheckAll(false);
-	    }
-	  }, {
-	    key: "_toggleCheckAll",
-	    value: function _toggleCheckAll(checked) {
-	      var rowsBefore = this.getSelections();
-	      this.$selectAll.add(this.$selectAll_).prop('checked', checked);
-	      this.$selectItem.filter(':enabled').prop('checked', checked);
-	      this.updateRows();
-	      var rowsAfter = this.getSelections();
-
-	      if (checked) {
-	        this.trigger('check-all', rowsAfter, rowsBefore);
-	        return;
-	      }
-
-	      this.trigger('uncheck-all', rowsAfter, rowsBefore);
-	    }
-	  }, {
-	    key: "checkInvert",
-	    value: function checkInvert() {
-	      var $items = this.$selectItem.filter(':enabled');
-	      var checked = $items.filter(':checked');
-	      $items.each(function (i, el) {
-	        $(el).prop('checked', !$(el).prop('checked'));
-	      });
-	      this.updateRows();
-	      this.updateSelected();
-	      this.trigger('uncheck-some', checked);
-	      checked = this.getSelections();
-	      this.trigger('check-some', checked);
-	    }
-	  }, {
-	    key: "check",
-	    value: function check(index) {
-	      this._toggleCheck(true, index);
-	    }
-	  }, {
-	    key: "uncheck",
-	    value: function uncheck(index) {
-	      this._toggleCheck(false, index);
-	    }
-	  }, {
-	    key: "_toggleCheck",
-	    value: function _toggleCheck(checked, index) {
-	      var $el = this.$selectItem.filter("[data-index=\"".concat(index, "\"]"));
-	      var row = this.data[index];
-
-	      if ($el.is(':radio') || this.options.singleSelect || this.options.multipleSelectRow && !this.multipleSelectRowCtrlKey && !this.multipleSelectRowShiftKey) {
-	        var _iteratorNormalCompletion9 = true;
-	        var _didIteratorError9 = false;
-	        var _iteratorError9 = undefined;
-
-	        try {
-	          for (var _iterator9 = this.options.data[Symbol.iterator](), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
-	            var r = _step9.value;
-	            r[this.header.stateField] = false;
-	          }
-	        } catch (err) {
-	          _didIteratorError9 = true;
-	          _iteratorError9 = err;
-	        } finally {
-	          try {
-	            if (!_iteratorNormalCompletion9 && _iterator9.return != null) {
-	              _iterator9.return();
-	            }
-	          } finally {
-	            if (_didIteratorError9) {
-	              throw _iteratorError9;
-	            }
-	          }
-	        }
-
-	        this.$selectItem.filter(':checked').not($el).prop('checked', false);
-	      }
-
-	      row[this.header.stateField] = checked;
-
-	      if (this.options.multipleSelectRow) {
-	        if (this.multipleSelectRowShiftKey && this.multipleSelectRowLastSelectedIndex >= 0) {
-	          var indexes = [this.multipleSelectRowLastSelectedIndex, index].sort();
-
-	          for (var i = indexes[0] + 1; i < indexes[1]; i++) {
-	            this.data[i][this.header.stateField] = true;
-	            this.$selectItem.filter("[data-index=\"".concat(i, "\"]")).prop('checked', true);
-	          }
-	        }
-
-	        this.multipleSelectRowCtrlKey = false;
-	        this.multipleSelectRowShiftKey = false;
-	        this.multipleSelectRowLastSelectedIndex = checked ? index : -1;
-	      }
-
-	      $el.prop('checked', checked);
-	      this.updateSelected();
-	      this.trigger(checked ? 'check' : 'uncheck', this.data[index], $el);
-	    }
-	  }, {
-	    key: "checkBy",
-	    value: function checkBy(obj) {
-	      this._toggleCheckBy(true, obj);
-	    }
-	  }, {
-	    key: "uncheckBy",
-	    value: function uncheckBy(obj) {
-	      this._toggleCheckBy(false, obj);
-	    }
-	  }, {
-	    key: "_toggleCheckBy",
-	    value: function _toggleCheckBy(checked, obj) {
-	      var _this23 = this;
-
-	      if (!obj.hasOwnProperty('field') || !obj.hasOwnProperty('values')) {
-	        return;
-	      }
-
-	      var rows = [];
-	      this.data.forEach(function (row, i) {
-	        if (!row.hasOwnProperty(obj.field)) {
+	    });
+	    this.$header.html(html.join(''));
+	    this.$header.find('th[data-field]').each(function (i, el) {
+	      $(el).data(visibleColumns[$(el).data('field')]);
+	    });
+	    this.$container.off('click', '.th-inner').on('click', '.th-inner', function (e) {
+	      var $this = $(e.currentTarget);
+
+	      if (_this2.options.detailView && !$this.parent().hasClass('bs-checkbox')) {
+	        if ($this.closest('.bootstrap-table')[0] !== _this2.$container[0]) {
 	          return false;
 	        }
+	      }
 
-	        if (obj.values.includes(row[obj.field])) {
-	          var $el = _this23.$selectItem.filter(':enabled').filter(Utils.sprintf('[data-index="%s"]', i));
+	      if (_this2.options.sortable && $this.parent().data().sortable) {
+	        _this2.onSort(e);
+	      }
+	    });
+	    this.$header.children().children().off('keypress').on('keypress', function (e) {
+	      if (_this2.options.sortable && $(e.currentTarget).data().sortable) {
+	        var code = e.keyCode || e.which;
 
-	          $el = checked ? $el.not(':checked') : $el.filter(':checked');
+	        if (code === 13) {
+	          // Enter keycode
+	          _this2.onSort(e);
+	        }
+	      }
+	    });
+	    var resizeEvent = "resize.bootstrap-table" + (this.$el.attr('id') || '');
+	    $(window).off(resizeEvent);
 
-	          if (!$el.length) {
+	    if (!this.options.showHeader || this.options.cardView) {
+	      this.$header.hide();
+	      this.$tableHeader.hide();
+	      this.$tableLoading.css('top', 0);
+	    } else {
+	      this.$header.show();
+	      this.$tableHeader.show();
+	      this.$tableLoading.css('top', this.$header.outerHeight() + 1); // Assign the correct sortable arrow
+
+	      this.getCaret();
+	      $(window).on(resizeEvent, function (e) {
+	        return _this2.resetWidth(e);
+	      });
+	    }
+
+	    this.$selectAll = this.$header.find('[name="btSelectAll"]');
+	    this.$selectAll.off('click').on('click', function (_ref) {
+	      var currentTarget = _ref.currentTarget;
+	      var checked = $(currentTarget).prop('checked');
+
+	      _this2[checked ? 'checkAll' : 'uncheckAll']();
+
+	      _this2.updateSelected();
+	    });
+	  };
+
+	  _proto.initData = function initData(data, type) {
+	    if (type === 'append') {
+	      this.options.data = this.options.data.concat(data);
+	    } else if (type === 'prepend') {
+	      this.options.data = [].concat(data).concat(this.options.data);
+	    } else {
+	      this.options.data = data || this.options.data;
+	    }
+
+	    this.data = this.options.data;
+
+	    if (this.options.sidePagination === 'server') {
+	      return;
+	    }
+
+	    this.initSort();
+	  };
+
+	  _proto.initSort = function initSort() {
+	    var _this3 = this;
+
+	    var name = this.options.sortName;
+	    var order = this.options.sortOrder === 'desc' ? -1 : 1;
+	    var index = this.header.fields.indexOf(this.options.sortName);
+	    var timeoutId = 0;
+
+	    if (index !== -1) {
+	      if (this.options.sortStable) {
+	        this.data.forEach(function (row, i) {
+	          if (!row.hasOwnProperty('_position')) {
+	            row._position = i;
+	          }
+	        });
+	      }
+
+	      if (this.options.customSort) {
+	        Utils.calculateObjectValue(this.options, this.options.customSort, [this.options.sortName, this.options.sortOrder, this.data]);
+	      } else {
+	        this.data.sort(function (a, b) {
+	          if (_this3.header.sortNames[index]) {
+	            name = _this3.header.sortNames[index];
+	          }
+
+	          var aa = Utils.getItemField(a, name, _this3.options.escape);
+	          var bb = Utils.getItemField(b, name, _this3.options.escape);
+	          var value = Utils.calculateObjectValue(_this3.header, _this3.header.sorters[index], [aa, bb, a, b]);
+
+	          if (value !== undefined) {
+	            if (_this3.options.sortStable && value === 0) {
+	              return order * (a._position - b._position);
+	            }
+
+	            return order * value;
+	          }
+
+	          return Utils.sort(aa, bb, order, _this3.options.sortStable);
+	        });
+	      }
+
+	      if (this.options.sortClass !== undefined) {
+	        clearTimeout(timeoutId);
+	        timeoutId = setTimeout(function () {
+	          _this3.$el.removeClass(_this3.options.sortClass);
+
+	          var index = _this3.$header.find("[data-field=\"" + _this3.options.sortName + "\"]").index();
+
+	          _this3.$el.find("tr td:nth-child(" + (index + 1) + ")").addClass(_this3.options.sortClass);
+	        }, 250);
+	      }
+	    }
+	  };
+
+	  _proto.onSort = function onSort(_ref2) {
+	    var type = _ref2.type,
+	        currentTarget = _ref2.currentTarget;
+	    var $this = type === 'keypress' ? $(currentTarget) : $(currentTarget).parent();
+	    var $this_ = this.$header.find('th').eq($this.index());
+	    this.$header.add(this.$header_).find('span.order').remove();
+
+	    if (this.options.sortName === $this.data('field')) {
+	      this.options.sortOrder = this.options.sortOrder === 'asc' ? 'desc' : 'asc';
+	    } else {
+	      this.options.sortName = $this.data('field');
+
+	      if (this.options.rememberOrder) {
+	        this.options.sortOrder = $this.data('order') === 'asc' ? 'desc' : 'asc';
+	      } else {
+	        this.options.sortOrder = this.columns[this.fieldsColumnsIndex[$this.data('field')]].sortOrder || this.columns[this.fieldsColumnsIndex[$this.data('field')]].order;
+	      }
+	    }
+
+	    this.trigger('sort', this.options.sortName, this.options.sortOrder);
+	    $this.add($this_).data('order', this.options.sortOrder); // Assign the correct sortable arrow
+
+	    this.getCaret();
+
+	    if (this.options.sidePagination === 'server') {
+	      this.options.pageNumber = 1;
+	      this.initServer(this.options.silentSort);
+	      return;
+	    }
+
+	    this.initSort();
+	    this.initBody();
+	  };
+
+	  _proto.initToolbar = function initToolbar() {
+	    var _this4 = this;
+
+	    var o = this.options;
+	    var html = [];
+	    var timeoutId = 0;
+	    var $keepOpen;
+	    var switchableCount = 0;
+
+	    if (this.$toolbar.find('.bs-bars').children().length) {
+	      $('body').append($(o.toolbar));
+	    }
+
+	    this.$toolbar.html('');
+
+	    if (typeof o.toolbar === 'string' || typeof o.toolbar === 'object') {
+	      $(Utils.sprintf('<div class="bs-bars %s-%s"></div>', this.constants.classes.pull, o.toolbarAlign)).appendTo(this.$toolbar).append($(o.toolbar));
+	    } // showColumns, showToggle, showRefresh
+
+
+	    html = ["<div class=\"" + ['columns', "columns-" + o.buttonsAlign, this.constants.classes.buttonsGroup, this.constants.classes.pull + "-" + o.buttonsAlign].join(' ') + "\">"];
+
+	    if (typeof o.icons === 'string') {
+	      o.icons = Utils.calculateObjectValue(null, o.icons);
+	    }
+
+	    if (o.showPaginationSwitch) {
+	      html.push("<button class=\"" + this.constants.buttonsClass + "\" type=\"button\" name=\"paginationSwitch\"\n        aria-label=\"Pagination Switch\" title=\"" + o.formatPaginationSwitch() + "\">\n        " + (o.showButtonIcons ? Utils.sprintf(this.constants.html.icon, o.iconsPrefix, o.icons.paginationSwitchDown) : '') + "\n        " + (o.showButtonText ? o.formatPaginationSwitchUp() : '') + "\n        </button>");
+	    }
+
+	    if (o.showRefresh) {
+	      html.push("<button class=\"" + this.constants.buttonsClass + "\" type=\"button\" name=\"refresh\"\n        aria-label=\"Refresh\" title=\"" + o.formatRefresh() + "\">\n        " + (o.showButtonIcons ? Utils.sprintf(this.constants.html.icon, o.iconsPrefix, o.icons.refresh) : '') + "\n        " + (o.showButtonText ? o.formatRefresh() : '') + "\n        </button>");
+	    }
+
+	    if (o.showToggle) {
+	      html.push("<button class=\"" + this.constants.buttonsClass + "\" type=\"button\" name=\"toggle\"\n        aria-label=\"Toggle\" title=\"" + o.formatToggle() + "\">\n        " + (o.showButtonIcons ? Utils.sprintf(this.constants.html.icon, o.iconsPrefix, o.icons.toggleOff) : '') + "\n        " + (o.showButtonText ? o.formatToggleOn() : '') + "\n        </button>");
+	    }
+
+	    if (o.showFullscreen) {
+	      html.push("<button class=\"" + this.constants.buttonsClass + "\" type=\"button\" name=\"fullscreen\"\n        aria-label=\"Fullscreen\" title=\"" + o.formatFullscreen() + "\">\n        " + (o.showButtonIcons ? Utils.sprintf(this.constants.html.icon, o.iconsPrefix, o.icons.fullscreen) : '') + "\n        " + (o.showButtonText ? o.formatFullscreen() : '') + "\n        </button>");
+	    }
+
+	    if (o.showColumns) {
+	      html.push("<div class=\"keep-open " + this.constants.classes.buttonsDropdown + "\" title=\"" + o.formatColumns() + "\">\n        <button class=\"" + this.constants.buttonsClass + " dropdown-toggle\" type=\"button\" data-toggle=\"dropdown\"\n        aria-label=\"Columns\" title=\"" + o.formatColumns() + "\">\n        " + (o.showButtonIcons ? Utils.sprintf(this.constants.html.icon, o.iconsPrefix, o.icons.columns) : '') + "\n        " + (o.showButtonText ? o.formatColumns() : '') + "\n        " + this.constants.html.dropdownCaret + "\n        </button>\n        " + this.constants.html.toolbarDropdown[0]);
+
+	      if (o.showColumnsToggleAll) {
+	        var allFieldsVisible = this.getVisibleColumns().length === this.columns.length;
+	        html.push(Utils.sprintf(this.constants.html.toolbarDropdownItem, Utils.sprintf('<input type="checkbox" class="toggle-all" %s> <span>%s</span>', allFieldsVisible ? 'checked="checked"' : '', o.formatColumnsToggleAll())));
+	        html.push(this.constants.html.toolbarDropdownSeparator);
+	      }
+
+	      this.columns.forEach(function (column, i) {
+	        if (column.radio || column.checkbox) {
+	          return;
+	        }
+
+	        if (o.cardView && !column.cardVisible) {
+	          return;
+	        }
+
+	        var checked = column.visible ? ' checked="checked"' : '';
+
+	        if (column.switchable) {
+	          html.push(Utils.sprintf(_this4.constants.html.toolbarDropdownItem, Utils.sprintf('<input type="checkbox" data-field="%s" value="%s"%s> <span>%s</span>', column.field, i, checked, column.title)));
+	          switchableCount++;
+	        }
+	      });
+	      html.push(this.constants.html.toolbarDropdown[1], '</div>');
+	    }
+
+	    html.push('</div>'); // Fix #188: this.showToolbar is for extensions
+
+	    if (this.showToolbar || html.length > 2) {
+	      this.$toolbar.append(html.join(''));
+	    }
+
+	    if (o.showPaginationSwitch) {
+	      this.$toolbar.find('button[name="paginationSwitch"]').off('click').on('click', function () {
+	        return _this4.togglePagination();
+	      });
+	    }
+
+	    if (o.showFullscreen) {
+	      this.$toolbar.find('button[name="fullscreen"]').off('click').on('click', function () {
+	        return _this4.toggleFullscreen();
+	      });
+	    }
+
+	    if (o.showRefresh) {
+	      this.$toolbar.find('button[name="refresh"]').off('click').on('click', function () {
+	        return _this4.refresh();
+	      });
+	    }
+
+	    if (o.showToggle) {
+	      this.$toolbar.find('button[name="toggle"]').off('click').on('click', function () {
+	        _this4.toggleView();
+	      });
+	    }
+
+	    if (o.showColumns) {
+	      $keepOpen = this.$toolbar.find('.keep-open');
+	      var $checkboxes = $keepOpen.find('input:not(".toggle-all")');
+	      var $toggleAll = $keepOpen.find('input.toggle-all');
+
+	      if (switchableCount <= o.minimumCountColumns) {
+	        $keepOpen.find('input').prop('disabled', true);
+	      }
+
+	      $keepOpen.find('li, label').off('click').on('click', function (e) {
+	        e.stopImmediatePropagation();
+	      });
+	      $checkboxes.off('click').on('click', function (_ref3) {
+	        var currentTarget = _ref3.currentTarget;
+	        var $this = $(currentTarget);
+
+	        _this4._toggleColumn($this.val(), $this.prop('checked'), false);
+
+	        _this4.trigger('column-switch', $this.data('field'), $this.prop('checked'));
+
+	        $toggleAll.prop('checked', $checkboxes.filter(':checked').length === _this4.columns.length);
+	      });
+	      $toggleAll.off('click').on('click', function (_ref4) {
+	        var currentTarget = _ref4.currentTarget;
+
+	        _this4._toggleAllColumns($(currentTarget).prop('checked'));
+	      });
+	    } // Fix #4516: this.showSearchClearButton is for extensions
+
+
+	    if (o.search || this.showSearchClearButton) {
+	      html = [];
+	      var showSearchButton = Utils.sprintf(this.constants.html.searchButton, this.constants.buttonsClass, o.formatSearch(), o.showButtonIcons ? Utils.sprintf(this.constants.html.icon, o.iconsPrefix, o.icons.search) : '', o.showButtonText ? o.formatSearch() : '');
+	      var showSearchClearButton = Utils.sprintf(this.constants.html.searchClearButton, this.constants.buttonsClass, o.formatClearSearch(), o.showButtonIcons ? Utils.sprintf(this.constants.html.icon, o.iconsPrefix, o.icons.clearSearch) : '', o.showButtonText ? o.formatClearSearch() : '');
+	      var searchInputHtml = "<input class=\"" + this.constants.classes.input + "\n        " + Utils.sprintf(' %s%s', this.constants.classes.inputPrefix, o.iconSize) + "\n        search-input\" type=\"text\" placeholder=\"" + o.formatSearch() + "\">";
+	      var searchInputFinalHtml = searchInputHtml;
+
+	      if (o.showSearchButton || o.showSearchClearButton) {
+	        var buttonsHtml = (o.showSearchButton ? showSearchButton : '') + (o.showSearchClearButton ? showSearchClearButton : '');
+	        searchInputFinalHtml = o.search ? Utils.sprintf(this.constants.html.inputGroup, searchInputHtml, buttonsHtml) : buttonsHtml;
+	      }
+
+	      html.push(Utils.sprintf("\n        <div class=\"" + this.constants.classes.pull + "-" + o.searchAlign + " search " + this.constants.classes.inputGroup + "\">\n          %s\n        </div>\n      ", searchInputFinalHtml));
+	      this.$toolbar.append(html.join(''));
+	      var $searchInput = this.$toolbar.find('.search input');
+
+	      var handleInputEvent = function handleInputEvent() {
+	        var eventTriggers = Utils.isIEBrowser() ? 'mouseup' : 'keyup drop blur';
+	        $searchInput.off(eventTriggers).on(eventTriggers, function (event) {
+	          if (o.searchOnEnterKey && event.keyCode !== 13) {
 	            return;
 	          }
 
-	          $el.prop('checked', checked);
-	          row[_this23.header.stateField] = checked;
-	          rows.push(row);
+	          if ([37, 38, 39, 40].includes(event.keyCode)) {
+	            return;
+	          }
 
-	          _this23.trigger(checked ? 'check' : 'uncheck', row, $el);
-	        }
-	      });
-	      this.updateSelected();
-	      this.trigger(checked ? 'check-some' : 'uncheck-some', rows);
-	    }
-	  }, {
-	    key: "refresh",
-	    value: function refresh(params) {
-	      if (params && params.url) {
-	        this.options.url = params.url;
-	      }
+	          clearTimeout(timeoutId); // doesn't matter if it's 0
 
-	      if (params && params.pageNumber) {
-	        this.options.pageNumber = params.pageNumber;
-	      }
-
-	      if (params && params.pageSize) {
-	        this.options.pageSize = params.pageSize;
-	      }
-
-	      this.trigger('refresh', this.initServer(params && params.silent, params && params.query, params && params.url));
-	    }
-	  }, {
-	    key: "destroy",
-	    value: function destroy() {
-	      this.$el.insertBefore(this.$container);
-	      $(this.options.toolbar).insertBefore(this.$el);
-	      this.$container.next().remove();
-	      this.$container.remove();
-	      this.$el.html(this.$el_.html()).css('margin-top', '0').attr('class', this.$el_.attr('class') || ''); // reset the class
-	    }
-	  }, {
-	    key: "resetView",
-	    value: function resetView(params) {
-	      var padding = 0;
-
-	      if (params && params.height) {
-	        this.options.height = params.height;
-	      }
-
-	      this.$selectAll.prop('checked', this.$selectItem.length > 0 && this.$selectItem.length === this.$selectItem.filter(':checked').length);
-	      this.$tableContainer.toggleClass('has-card-view', this.options.cardView);
-
-	      if (!this.options.cardView && this.options.showHeader && this.options.height) {
-	        this.$tableHeader.show();
-	        this.resetHeader();
-	        padding += this.$header.outerHeight(true) + 1;
-	      } else {
-	        this.$tableHeader.hide();
-	        this.trigger('post-header');
-	      }
-
-	      if (!this.options.cardView && this.options.showFooter) {
-	        this.$tableFooter.show();
-	        this.fitFooter();
-
-	        if (this.options.height) {
-	          padding += this.$tableFooter.outerHeight(true);
-	        }
-	      }
-
-	      if (this.options.height) {
-	        var toolbarHeight = this.$toolbar.outerHeight(true);
-	        var paginationHeight = this.$pagination.outerHeight(true);
-	        var height = this.options.height - toolbarHeight - paginationHeight;
-	        var tableHeight = this.$tableBody.find('table').outerHeight(true);
-	        this.$tableContainer.css('height', "".concat(height, "px"));
-	        this.$tableBorder && this.$tableBorder.css('height', "".concat(height - tableHeight - padding - 1, "px"));
-	      }
-
-	      if (this.options.cardView) {
-	        // remove the element css
-	        this.$el.css('margin-top', '0');
-	        this.$tableContainer.css('padding-bottom', '0');
-	        this.$tableFooter.hide();
-	      } else {
-	        // Assign the correct sortable arrow
-	        this.getCaret();
-	        this.$tableContainer.css('padding-bottom', "".concat(padding, "px"));
-	      }
-
-	      this.trigger('reset-view');
-	    }
-	  }, {
-	    key: "resetWidth",
-	    value: function resetWidth() {
-	      if (this.options.showHeader && this.options.height) {
-	        this.fitHeader();
-	      }
-
-	      if (this.options.showFooter && !this.options.cardView) {
-	        this.fitFooter();
-	      }
-	    }
-	  }, {
-	    key: "showLoading",
-	    value: function showLoading() {
-	      this.$tableLoading.css('display', 'flex');
-	    }
-	  }, {
-	    key: "hideLoading",
-	    value: function hideLoading() {
-	      this.$tableLoading.css('display', 'none');
-	    }
-	  }, {
-	    key: "togglePagination",
-	    value: function togglePagination() {
-	      this.options.pagination = !this.options.pagination;
-	      var icon = this.options.showButtonIcons ? this.options.pagination ? this.options.icons.paginationSwitchDown : this.options.icons.paginationSwitchUp : '';
-	      var text = this.options.showButtonText ? this.options.pagination ? this.options.formatPaginationSwitchUp() : this.options.formatPaginationSwitchDown() : '';
-	      this.$toolbar.find('button[name="paginationSwitch"]').html(Utils.sprintf(this.constants.html.icon, this.options.iconsPrefix, icon) + ' ' + text);
-	      this.updatePagination();
-	    }
-	  }, {
-	    key: "toggleFullscreen",
-	    value: function toggleFullscreen() {
-	      this.$el.closest('.bootstrap-table').toggleClass('fullscreen');
-	      this.resetView();
-	    }
-	  }, {
-	    key: "toggleView",
-	    value: function toggleView() {
-	      this.options.cardView = !this.options.cardView;
-	      this.initHeader();
-	      var icon = this.options.showButtonIcons ? this.options.cardView ? this.options.icons.toggleOn : this.options.icons.toggleOff : '';
-	      var text = this.options.showButtonText ? this.options.cardView ? this.options.formatToggleOff() : this.options.formatToggleOn() : '';
-	      this.$toolbar.find('button[name="toggle"]').html(Utils.sprintf(this.constants.html.icon, this.options.iconsPrefix, icon) + ' ' + text);
-	      this.initBody();
-	      this.trigger('toggle', this.options.cardView);
-	    }
-	  }, {
-	    key: "resetSearch",
-	    value: function resetSearch(text) {
-	      var $search = this.$toolbar.find('.search input');
-	      $search.val(text || '');
-	      this.onSearch({
-	        currentTarget: $search
-	      });
-	    }
-	  }, {
-	    key: "filterBy",
-	    value: function filterBy(columns, options) {
-	      this.filterOptions = Utils.isEmptyObject(options) ? this.options.filterOptions : $.extend(this.options.filterOptions, options);
-	      this.filterColumns = Utils.isEmptyObject(columns) ? {} : columns;
-	      this.options.pageNumber = 1;
-	      this.initSearch();
-	      this.updatePagination();
-	    }
-	  }, {
-	    key: "scrollTo",
-	    value: function scrollTo(params) {
-	      if (typeof params === 'undefined') {
-	        return this.$tableBody.scrollTop();
-	      }
-
-	      var options = {
-	        unit: 'px',
-	        value: 0
+	          timeoutId = setTimeout(function () {
+	            _this4.onSearch({
+	              currentTarget: event.currentTarget
+	            });
+	          }, o.searchTimeOut);
+	        });
 	      };
 
-	      if (_typeof(params) === 'object') {
-	        options = Object.assign(options, params);
-	      } else if (typeof params === 'string' && params === 'bottom') {
-	        options.value = this.$tableBody[0].scrollHeight;
-	      } else if (typeof params === 'string') {
-	        options.value = params;
+	      if (o.showSearchButton) {
+	        this.$toolbar.find('.search button[name=search]').off('click').on('click', function (event) {
+	          clearTimeout(timeoutId); // doesn't matter if it's 0
+
+	          timeoutId = setTimeout(function () {
+	            _this4.onSearch({
+	              currentTarget: $searchInput
+	            });
+	          }, o.searchTimeOut);
+	        });
+
+	        if (o.searchOnEnterKey) {
+	          handleInputEvent();
+	        }
+	      } else {
+	        handleInputEvent();
 	      }
 
-	      var scrollTo = options.value;
-
-	      if (options.unit === 'rows') {
-	        scrollTo = 0;
-	        this.$body.find("> tr:lt(".concat(options.value, ")")).each(function (i, el) {
-	          scrollTo += $(el).outerHeight(true);
+	      if (o.showSearchClearButton) {
+	        this.$toolbar.find('.search button[name=clearSearch]').click(function () {
+	          _this4.resetSearch();
 	        });
 	      }
+	    }
+	  };
 
-	      this.$tableBody.scrollTop(scrollTo);
-	    }
-	  }, {
-	    key: "getScrollPosition",
-	    value: function getScrollPosition() {
-	      return this.scrollTo();
-	    }
-	  }, {
-	    key: "selectPage",
-	    value: function selectPage(page) {
-	      if (page > 0 && page <= this.options.totalPages) {
-	        this.options.pageNumber = page;
-	        this.updatePagination();
-	      }
-	    }
-	  }, {
-	    key: "prevPage",
-	    value: function prevPage() {
-	      if (this.options.pageNumber > 1) {
-	        this.options.pageNumber--;
-	        this.updatePagination();
-	      }
-	    }
-	  }, {
-	    key: "nextPage",
-	    value: function nextPage() {
-	      if (this.options.pageNumber < this.options.totalPages) {
-	        this.options.pageNumber++;
-	        this.updatePagination();
-	      }
-	    }
-	  }, {
-	    key: "toggleDetailView",
-	    value: function toggleDetailView(index, _columnDetailFormatter) {
-	      var $tr = this.$body.find(Utils.sprintf('> tr[data-index="%s"]', index));
+	  _proto.onSearch = function onSearch(_temp, overwriteSearchText) {
+	    var _ref5 = _temp === void 0 ? {} : _temp,
+	        currentTarget = _ref5.currentTarget,
+	        firedByInitSearchText = _ref5.firedByInitSearchText;
 
-	      if ($tr.next().is('tr.detail-view')) {
-	        this.collapseRow(index);
+	    if (overwriteSearchText === void 0) {
+	      overwriteSearchText = true;
+	    }
+
+	    if (currentTarget !== undefined && $(currentTarget).length && overwriteSearchText) {
+	      var text = $(currentTarget).val().trim();
+
+	      if (this.options.trimOnSearch && $(currentTarget).val() !== text) {
+	        $(currentTarget).val(text);
+	      }
+
+	      if (this.searchText === text) {
+	        return;
+	      }
+
+	      if ($(currentTarget).hasClass('search-input')) {
+	        this.searchText = text;
+	        this.options.searchText = text;
+	      }
+	    }
+
+	    if (!firedByInitSearchText) {
+	      this.options.pageNumber = 1;
+	    }
+
+	    this.initSearch();
+
+	    if (firedByInitSearchText) {
+	      if (this.options.sidePagination === 'client') {
+	        this.updatePagination();
+	      }
+	    } else {
+	      this.updatePagination();
+	    }
+
+	    this.trigger('search', this.searchText);
+	  };
+
+	  _proto.initSearch = function initSearch() {
+	    var _this5 = this;
+
+	    this.filterOptions = this.filterOptions || this.options.filterOptions;
+
+	    if (this.options.sidePagination !== 'server') {
+	      if (this.options.customSearch) {
+	        this.data = Utils.calculateObjectValue(this.options, this.options.customSearch, [this.options.data, this.searchText, this.filterColumns]);
+	        return;
+	      }
+
+	      var s = this.searchText && (this.options.escape ? Utils.escapeHTML(this.searchText) : this.searchText).toLowerCase();
+	      var f = Utils.isEmptyObject(this.filterColumns) ? null : this.filterColumns; // Check filter
+
+	      if (typeof this.filterOptions.filterAlgorithm === 'function') {
+	        this.data = this.options.data.filter(function (item, i) {
+	          return _this5.filterOptions.filterAlgorithm.apply(null, [item, f]);
+	        });
+	      } else if (typeof this.filterOptions.filterAlgorithm === 'string') {
+	        this.data = f ? this.options.data.filter(function (item, i) {
+	          var filterAlgorithm = _this5.filterOptions.filterAlgorithm;
+
+	          if (filterAlgorithm === 'and') {
+	            for (var key in f) {
+	              if (Array.isArray(f[key]) && !f[key].includes(item[key]) || !Array.isArray(f[key]) && item[key] !== f[key]) {
+	                return false;
+	              }
+	            }
+	          } else if (filterAlgorithm === 'or') {
+	            var match = false;
+
+	            for (var _key in f) {
+	              if (Array.isArray(f[_key]) && f[_key].includes(item[_key]) || !Array.isArray(f[_key]) && item[_key] === f[_key]) {
+	                match = true;
+	              }
+	            }
+
+	            return match;
+	          }
+
+	          return true;
+	        }) : this.options.data;
+	      }
+
+	      var visibleFields = this.getVisibleFields();
+	      this.data = s ? this.data.filter(function (item, i) {
+	        for (var j = 0; j < _this5.header.fields.length; j++) {
+	          if (!_this5.header.searchables[j] || _this5.options.visibleSearch && visibleFields.indexOf(_this5.header.fields[j]) === -1) {
+	            continue;
+	          }
+
+	          var key = Utils.isNumeric(_this5.header.fields[j]) ? parseInt(_this5.header.fields[j], 10) : _this5.header.fields[j];
+	          var column = _this5.columns[_this5.fieldsColumnsIndex[key]];
+	          var value = void 0;
+
+	          if (typeof key === 'string') {
+	            value = item;
+	            var props = key.split('.');
+
+	            for (var _i = 0; _i < props.length; _i++) {
+	              if (value[props[_i]] !== null) {
+	                value = value[props[_i]];
+	              }
+	            }
+	          } else {
+	            value = item[key];
+	          } // Fix #142: respect searchFormatter boolean
+
+
+	          if (column && column.searchFormatter) {
+	            value = Utils.calculateObjectValue(column, _this5.header.formatters[j], [value, item, i, column.field], value);
+	          }
+
+	          if (typeof value === 'string' || typeof value === 'number') {
+	            if (_this5.options.strictSearch) {
+	              if (("" + value).toLowerCase() === s) {
+	                return true;
+	              }
+	            } else {
+	              var largerSmallerEqualsRegex = /(?:(<=|=>|=<|>=|>|<)(?:\s+)?(\d+)?|(\d+)?(\s+)?(<=|=>|=<|>=|>|<))/gm;
+	              var matches = largerSmallerEqualsRegex.exec(s);
+	              var comparisonCheck = false;
+
+	              if (matches) {
+	                var operator = matches[1] || matches[5] + "l";
+	                var comparisonValue = matches[2] || matches[3];
+
+	                var _int = parseInt(value, 10);
+
+	                var comparisonInt = parseInt(comparisonValue, 10);
+
+	                switch (operator) {
+	                  case '>':
+	                  case '<l':
+	                    comparisonCheck = _int > comparisonInt;
+	                    break;
+
+	                  case '<':
+	                  case '>l':
+	                    comparisonCheck = _int < comparisonInt;
+	                    break;
+
+	                  case '<=':
+	                  case '=<':
+	                  case '>=l':
+	                  case '=>l':
+	                    comparisonCheck = _int <= comparisonInt;
+	                    break;
+
+	                  case '>=':
+	                  case '=>':
+	                  case '<=l':
+	                  case '=<l':
+	                    comparisonCheck = _int >= comparisonInt;
+	                    break;
+
+	                  default:
+	                    break;
+	                }
+	              }
+
+	              if (comparisonCheck || ("" + value).toLowerCase().includes(s)) {
+	                return true;
+	              }
+	            }
+	          }
+	        }
+
+	        return false;
+	      }) : this.data;
+	    }
+	  };
+
+	  _proto.initPagination = function initPagination() {
+	    var _this6 = this;
+
+	    var o = this.options;
+
+	    if (!o.pagination) {
+	      this.$pagination.hide();
+	      return;
+	    }
+
+	    this.$pagination.show();
+	    var html = [];
+	    var $allSelected = false;
+	    var i;
+	    var from;
+	    var to;
+	    var $pageList;
+	    var $pre;
+	    var $next;
+	    var $number;
+	    var data = this.getData({
+	      includeHiddenRows: false
+	    });
+	    var pageList = o.pageList;
+
+	    if (o.sidePagination !== 'server') {
+	      o.totalRows = data.length;
+	    }
+
+	    this.totalPages = 0;
+
+	    if (o.totalRows) {
+	      if (o.pageSize === o.formatAllRows()) {
+	        o.pageSize = o.totalRows;
+	        $allSelected = true;
+	      } else if (o.pageSize === o.totalRows) {
+	        // Fix #667 Table with pagination,
+	        // multiple pages and a search this matches to one page throws exception
+	        var pageLst = typeof o.pageList === 'string' ? o.pageList.replace('[', '').replace(']', '').replace(/ /g, '').toLowerCase().split(',') : o.pageList;
+
+	        if (pageLst.includes(o.formatAllRows().toLowerCase())) {
+	          $allSelected = true;
+	        }
+	      }
+
+	      this.totalPages = ~~((o.totalRows - 1) / o.pageSize) + 1;
+	      o.totalPages = this.totalPages;
+	    }
+
+	    if (this.totalPages > 0 && o.pageNumber > this.totalPages) {
+	      o.pageNumber = this.totalPages;
+	    }
+
+	    this.pageFrom = (o.pageNumber - 1) * o.pageSize + 1;
+	    this.pageTo = o.pageNumber * o.pageSize;
+
+	    if (this.pageTo > o.totalRows) {
+	      this.pageTo = o.totalRows;
+	    }
+
+	    if (this.options.pagination && this.options.sidePagination !== 'server') {
+	      this.options.totalNotFiltered = this.options.data.length;
+	    }
+
+	    if (!this.options.showExtendedPagination) {
+	      this.options.totalNotFiltered = undefined;
+	    }
+
+	    var paginationInfo = o.onlyInfoPagination ? o.formatDetailPagination(o.totalRows) : o.formatShowingRows(this.pageFrom, this.pageTo, o.totalRows, o.totalNotFiltered);
+	    html.push("<div class=\"" + this.constants.classes.pull + "-" + o.paginationDetailHAlign + " pagination-detail\">\n      <span class=\"pagination-info\">\n      " + paginationInfo + "\n      </span>");
+
+	    if (!o.onlyInfoPagination) {
+	      html.push('<span class="page-list">');
+	      var pageNumber = ["<span class=\"" + this.constants.classes.paginationDropdown + "\">\n        <button class=\"" + this.constants.buttonsClass + " dropdown-toggle\" type=\"button\" data-toggle=\"dropdown\">\n        <span class=\"page-size\">\n        " + ($allSelected ? o.formatAllRows() : o.pageSize) + "\n        </span>\n        " + this.constants.html.dropdownCaret + "\n        </button>\n        " + this.constants.html.pageDropdown[0]];
+
+	      if (typeof o.pageList === 'string') {
+	        var list = o.pageList.replace('[', '').replace(']', '').replace(/ /g, '').split(',');
+	        pageList = [];
+
+	        for (var _iterator = list, _isArray = Array.isArray(_iterator), _i2 = 0, _iterator = _isArray ? _iterator : _iterator[Symbol.iterator]();;) {
+	          var _ref6;
+
+	          if (_isArray) {
+	            if (_i2 >= _iterator.length) break;
+	            _ref6 = _iterator[_i2++];
+	          } else {
+	            _i2 = _iterator.next();
+	            if (_i2.done) break;
+	            _ref6 = _i2.value;
+	          }
+
+	          var value = _ref6;
+	          pageList.push(value.toLowerCase() === o.formatAllRows().toLowerCase() || ['all', 'unlimited'].includes(value.toLowerCase()) ? o.formatAllRows() : +value);
+	        }
+	      }
+
+	      pageList.forEach(function (page, i) {
+	        if (!o.smartDisplay || i === 0 || pageList[i - 1] < o.totalRows) {
+	          var active;
+
+	          if ($allSelected) {
+	            active = page === o.formatAllRows() ? _this6.constants.classes.dropdownActive : '';
+	          } else {
+	            active = page === o.pageSize ? _this6.constants.classes.dropdownActive : '';
+	          }
+
+	          pageNumber.push(Utils.sprintf(_this6.constants.html.pageDropdownItem, active, page));
+	        }
+	      });
+	      pageNumber.push(this.constants.html.pageDropdown[1] + "</span>");
+	      html.push(o.formatRecordsPerPage(pageNumber.join('')));
+	      html.push('</span></div>');
+	      html.push("<div class=\"" + this.constants.classes.pull + "-" + o.paginationHAlign + " pagination\">", Utils.sprintf(this.constants.html.pagination[0], Utils.sprintf(' pagination-%s', o.iconSize)), Utils.sprintf(this.constants.html.paginationItem, ' page-pre', o.formatSRPaginationPreText(), o.paginationPreText));
+
+	      if (this.totalPages < o.paginationSuccessivelySize) {
+	        from = 1;
+	        to = this.totalPages;
 	      } else {
-	        this.expandRow(index, _columnDetailFormatter);
+	        from = o.pageNumber - o.paginationPagesBySide;
+	        to = from + o.paginationPagesBySide * 2;
 	      }
 
-	      this.resetView();
-	    }
-	  }, {
-	    key: "expandRow",
-	    value: function expandRow(index, _columnDetailFormatter) {
-	      var row = this.data[index];
-	      var $tr = this.$body.find(Utils.sprintf('> tr[data-index="%s"][data-has-detail-view]', index));
+	      if (o.pageNumber < o.paginationSuccessivelySize - 1) {
+	        to = o.paginationSuccessivelySize;
+	      }
 
-	      if ($tr.next().is('tr.detail-view')) {
+	      if (o.paginationSuccessivelySize > this.totalPages - from) {
+	        from = from - (o.paginationSuccessivelySize - (this.totalPages - from)) + 1;
+	      }
+
+	      if (from < 1) {
+	        from = 1;
+	      }
+
+	      if (to > this.totalPages) {
+	        to = this.totalPages;
+	      }
+
+	      var middleSize = Math.round(o.paginationPagesBySide / 2);
+
+	      var pageItem = function pageItem(i, classes) {
+	        if (classes === void 0) {
+	          classes = '';
+	        }
+
+	        return Utils.sprintf(_this6.constants.html.paginationItem, classes + (i === o.pageNumber ? " " + _this6.constants.classes.paginationActive : ''), o.formatSRPaginationPageText(i), i);
+	      };
+
+	      if (from > 1) {
+	        var max = o.paginationPagesBySide;
+	        if (max >= from) max = from - 1;
+
+	        for (i = 1; i <= max; i++) {
+	          html.push(pageItem(i));
+	        }
+
+	        if (from - 1 === max + 1) {
+	          i = from - 1;
+	          html.push(pageItem(i));
+	        } else {
+	          if (from - 1 > max) {
+	            if (from - o.paginationPagesBySide * 2 > o.paginationPagesBySide && o.paginationUseIntermediate) {
+	              i = Math.round((from - middleSize) / 2 + middleSize);
+	              html.push(pageItem(i, ' page-intermediate'));
+	            } else {
+	              html.push(Utils.sprintf(this.constants.html.paginationItem, ' page-first-separator disabled', '', '...'));
+	            }
+	          }
+	        }
+	      }
+
+	      for (i = from; i <= to; i++) {
+	        html.push(pageItem(i));
+	      }
+
+	      if (this.totalPages > to) {
+	        var min = this.totalPages - (o.paginationPagesBySide - 1);
+	        if (to >= min) min = to + 1;
+
+	        if (to + 1 === min - 1) {
+	          i = to + 1;
+	          html.push(pageItem(i));
+	        } else {
+	          if (min > to + 1) {
+	            if (this.totalPages - to > o.paginationPagesBySide * 2 && o.paginationUseIntermediate) {
+	              i = Math.round((this.totalPages - middleSize - to) / 2 + to);
+	              html.push(pageItem(i, ' page-intermediate'));
+	            } else {
+	              html.push(Utils.sprintf(this.constants.html.paginationItem, ' page-last-separator disabled', '', '...'));
+	            }
+	          }
+	        }
+
+	        for (i = min; i <= this.totalPages; i++) {
+	          html.push(pageItem(i));
+	        }
+	      }
+
+	      html.push(Utils.sprintf(this.constants.html.paginationItem, ' page-next', o.formatSRPaginationNextText(), o.paginationNextText));
+	      html.push(this.constants.html.pagination[1], '</div>');
+	    }
+
+	    this.$pagination.html(html.join(''));
+	    var dropupClass = ['bottom', 'both'].includes(o.paginationVAlign) ? " " + this.constants.classes.dropup : '';
+	    this.$pagination.last().find('.page-list > span').addClass(dropupClass);
+
+	    if (!o.onlyInfoPagination) {
+	      $pageList = this.$pagination.find('.page-list a');
+	      $pre = this.$pagination.find('.page-pre');
+	      $next = this.$pagination.find('.page-next');
+	      $number = this.$pagination.find('.page-item').not('.page-next, .page-pre, .page-last-separator, .page-first-separator');
+
+	      if (this.totalPages <= 1) {
+	        this.$pagination.find('div.pagination').hide();
+	      }
+
+	      if (o.smartDisplay) {
+	        if (pageList.length < 2 || o.totalRows <= pageList[0]) {
+	          this.$pagination.find('span.page-list').hide();
+	        }
+	      } // when data is empty, hide the pagination
+
+
+	      this.$pagination[this.getData().length ? 'show' : 'hide']();
+
+	      if (!o.paginationLoop) {
+	        if (o.pageNumber === 1) {
+	          $pre.addClass('disabled');
+	        }
+
+	        if (o.pageNumber === this.totalPages) {
+	          $next.addClass('disabled');
+	        }
+	      }
+
+	      if ($allSelected) {
+	        o.pageSize = o.formatAllRows();
+	      } // removed the events for last and first, onPageNumber executeds the same logic
+
+
+	      $pageList.off('click').on('click', function (e) {
+	        return _this6.onPageListChange(e);
+	      });
+	      $pre.off('click').on('click', function (e) {
+	        return _this6.onPagePre(e);
+	      });
+	      $next.off('click').on('click', function (e) {
+	        return _this6.onPageNext(e);
+	      });
+	      $number.off('click').on('click', function (e) {
+	        return _this6.onPageNumber(e);
+	      });
+	    }
+	  };
+
+	  _proto.updatePagination = function updatePagination(event) {
+	    // Fix #171: IE disabled button can be clicked bug.
+	    if (event && $(event.currentTarget).hasClass('disabled')) {
+	      return;
+	    }
+
+	    if (!this.options.maintainMetaData) {
+	      this.resetRows();
+	    }
+
+	    this.initPagination();
+
+	    if (this.options.sidePagination === 'server') {
+	      this.initServer();
+	    } else {
+	      this.initBody();
+	    }
+
+	    this.trigger('page-change', this.options.pageNumber, this.options.pageSize);
+	  };
+
+	  _proto.onPageListChange = function onPageListChange(event) {
+	    event.preventDefault();
+	    var $this = $(event.currentTarget);
+	    $this.parent().addClass(this.constants.classes.dropdownActive).siblings().removeClass(this.constants.classes.dropdownActive);
+	    this.options.pageSize = $this.text().toUpperCase() === this.options.formatAllRows().toUpperCase() ? this.options.formatAllRows() : +$this.text();
+	    this.$toolbar.find('.page-size').text(this.options.pageSize);
+	    this.updatePagination(event);
+	    return false;
+	  };
+
+	  _proto.onPagePre = function onPagePre(event) {
+	    event.preventDefault();
+
+	    if (this.options.pageNumber - 1 === 0) {
+	      this.options.pageNumber = this.options.totalPages;
+	    } else {
+	      this.options.pageNumber--;
+	    }
+
+	    this.updatePagination(event);
+	    return false;
+	  };
+
+	  _proto.onPageNext = function onPageNext(event) {
+	    event.preventDefault();
+
+	    if (this.options.pageNumber + 1 > this.options.totalPages) {
+	      this.options.pageNumber = 1;
+	    } else {
+	      this.options.pageNumber++;
+	    }
+
+	    this.updatePagination(event);
+	    return false;
+	  };
+
+	  _proto.onPageNumber = function onPageNumber(event) {
+	    event.preventDefault();
+
+	    if (this.options.pageNumber === +$(event.currentTarget).text()) {
+	      return;
+	    }
+
+	    this.options.pageNumber = +$(event.currentTarget).text();
+	    this.updatePagination(event);
+	    return false;
+	  };
+
+	  _proto.initRow = function initRow(item, i, data, trFragments) {
+	    var _this7 = this;
+
+	    var html = [];
+	    var style = {};
+	    var csses = [];
+	    var data_ = '';
+	    var attributes = {};
+	    var htmlAttributes = [];
+
+	    if (Utils.findIndex(this.hiddenRows, item) > -1) {
+	      return;
+	    }
+
+	    style = Utils.calculateObjectValue(this.options, this.options.rowStyle, [item, i], style);
+
+	    if (style && style.css) {
+	      for (var _i3 = 0, _Object$entries = Object.entries(style.css); _i3 < _Object$entries.length; _i3++) {
+	        var _Object$entries$_i = _Object$entries[_i3],
+	            key = _Object$entries$_i[0],
+	            value = _Object$entries$_i[1];
+	        csses.push(key + ": " + value);
+	      }
+	    }
+
+	    attributes = Utils.calculateObjectValue(this.options, this.options.rowAttributes, [item, i], attributes);
+
+	    if (attributes) {
+	      for (var _i4 = 0, _Object$entries2 = Object.entries(attributes); _i4 < _Object$entries2.length; _i4++) {
+	        var _Object$entries2$_i = _Object$entries2[_i4],
+	            _key2 = _Object$entries2$_i[0],
+	            _value = _Object$entries2$_i[1];
+	        htmlAttributes.push(_key2 + "=\"" + Utils.escapeHTML(_value) + "\"");
+	      }
+	    }
+
+	    if (item._data && !Utils.isEmptyObject(item._data)) {
+	      for (var _i5 = 0, _Object$entries3 = Object.entries(item._data); _i5 < _Object$entries3.length; _i5++) {
+	        var _Object$entries3$_i = _Object$entries3[_i5],
+	            k = _Object$entries3$_i[0],
+	            v = _Object$entries3$_i[1];
+
+	        // ignore data-index
+	        if (k === 'index') {
+	          return;
+	        }
+
+	        data_ += " data-" + k + "='" + (typeof v === 'object' ? JSON.stringify(v) : v) + "'";
+	      }
+	    }
+
+	    html.push('<tr', Utils.sprintf(' %s', htmlAttributes.length ? htmlAttributes.join(' ') : undefined), Utils.sprintf(' id="%s"', Array.isArray(item) ? undefined : item._id), Utils.sprintf(' class="%s"', style.classes || (Array.isArray(item) ? undefined : item._class)), " data-index=\"" + i + "\"", Utils.sprintf(' data-uniqueid="%s"', Utils.getItemField(item, this.options.uniqueId, false)), Utils.sprintf(' data-has-detail-view="%s"', !this.options.cardView && this.options.detailView && Utils.calculateObjectValue(null, this.options.detailFilter, [i, item]) ? 'true' : undefined), Utils.sprintf('%s', data_), '>');
+
+	    if (this.options.cardView) {
+	      html.push("<td colspan=\"" + this.header.fields.length + "\"><div class=\"card-views\">");
+	    }
+
+	    if (!this.options.cardView && this.options.detailView && this.options.detailViewIcon) {
+	      html.push('<td>');
+
+	      if (Utils.calculateObjectValue(null, this.options.detailFilter, [i, item])) {
+	        html.push("\n          <a class=\"detail-icon\" href=\"#\">\n          " + Utils.sprintf(this.constants.html.icon, this.options.iconsPrefix, this.options.icons.detailOpen) + "\n          </a>\n        ");
+	      }
+
+	      html.push('</td>');
+	    }
+
+	    this.header.fields.forEach(function (field, j) {
+	      var text = '';
+	      var value_ = Utils.getItemField(item, field, _this7.options.escape);
+	      var value = '';
+	      var type = '';
+	      var cellStyle = {};
+	      var id_ = '';
+	      var class_ = _this7.header.classes[j];
+	      var style_ = '';
+	      var data_ = '';
+	      var rowspan_ = '';
+	      var colspan_ = '';
+	      var title_ = '';
+	      var column = _this7.columns[j];
+
+	      if (_this7.fromHtml && typeof value_ === 'undefined') {
+	        if (!column.checkbox && !column.radio) {
+	          return;
+	        }
+	      }
+
+	      if (!column.visible) {
 	        return;
 	      }
 
-	      if (this.options.detailViewIcon) {
-	        $tr.find('a.detail-icon').html(Utils.sprintf(this.constants.html.icon, this.options.iconsPrefix, this.options.icons.detailClose));
-	      }
-
-	      $tr.after(Utils.sprintf('<tr class="detail-view"><td colspan="%s"></td></tr>', $tr.children('td').length));
-	      var $element = $tr.next().find('td');
-	      var detailFormatter = _columnDetailFormatter || this.options.detailFormatter;
-	      var content = Utils.calculateObjectValue(this.options, detailFormatter, [index, row, $element], '');
-
-	      if ($element.length === 1) {
-	        $element.append(content);
-	      }
-
-	      this.trigger('expand-row', index, row, $element);
-	    }
-	  }, {
-	    key: "collapseRow",
-	    value: function collapseRow(index) {
-	      var row = this.data[index];
-	      var $tr = this.$body.find(Utils.sprintf('> tr[data-index="%s"][data-has-detail-view]', index));
-
-	      if (!$tr.next().is('tr.detail-view')) {
+	      if (_this7.options.cardView && !column.cardVisible) {
 	        return;
 	      }
 
-	      if (this.options.detailViewIcon) {
-	        $tr.find('a.detail-icon').html(Utils.sprintf(this.constants.html.icon, this.options.iconsPrefix, this.options.icons.detailOpen));
+	      if (column.escape) {
+	        value_ = Utils.escapeHTML(value_);
 	      }
 
-	      this.trigger('collapse-row', index, row, $tr.next());
-	      $tr.next().remove();
+	      if (csses.concat([_this7.header.styles[j]]).length) {
+	        style_ = " style=\"" + csses.concat([_this7.header.styles[j]]).join('; ') + "\"";
+	      } // handle td's id and class
+
+
+	      if (item["_" + field + "_id"]) {
+	        id_ = Utils.sprintf(' id="%s"', item["_" + field + "_id"]);
+	      }
+
+	      if (item["_" + field + "_class"]) {
+	        class_ = Utils.sprintf(' class="%s"', item["_" + field + "_class"]);
+	      }
+
+	      if (item["_" + field + "_rowspan"]) {
+	        rowspan_ = Utils.sprintf(' rowspan="%s"', item["_" + field + "_rowspan"]);
+	      }
+
+	      if (item["_" + field + "_colspan"]) {
+	        colspan_ = Utils.sprintf(' colspan="%s"', item["_" + field + "_colspan"]);
+	      }
+
+	      if (item["_" + field + "_title"]) {
+	        title_ = Utils.sprintf(' title="%s"', item["_" + field + "_title"]);
+	      }
+
+	      cellStyle = Utils.calculateObjectValue(_this7.header, _this7.header.cellStyles[j], [value_, item, i, field], cellStyle);
+
+	      if (cellStyle.classes) {
+	        class_ = " class=\"" + cellStyle.classes + "\"";
+	      }
+
+	      if (cellStyle.css) {
+	        var csses_ = [];
+
+	        for (var _i6 = 0, _Object$entries4 = Object.entries(cellStyle.css); _i6 < _Object$entries4.length; _i6++) {
+	          var _Object$entries4$_i = _Object$entries4[_i6],
+	              _key3 = _Object$entries4$_i[0],
+	              _value2 = _Object$entries4$_i[1];
+	          csses_.push(_key3 + ": " + _value2);
+	        }
+
+	        style_ = " style=\"" + csses_.concat(_this7.header.styles[j]).join('; ') + "\"";
+	      }
+
+	      value = Utils.calculateObjectValue(column, _this7.header.formatters[j], [value_, item, i, field], value_);
+
+	      if (item["_" + field + "_data"] && !Utils.isEmptyObject(item["_" + field + "_data"])) {
+	        for (var _i7 = 0, _Object$entries5 = Object.entries(item["_" + field + "_data"]); _i7 < _Object$entries5.length; _i7++) {
+	          var _Object$entries5$_i = _Object$entries5[_i7],
+	              _k = _Object$entries5$_i[0],
+	              _v = _Object$entries5$_i[1];
+
+	          // ignore data-index
+	          if (_k === 'index') {
+	            return;
+	          }
+
+	          data_ += " data-" + _k + "=\"" + _v + "\"";
+	        }
+	      }
+
+	      if (column.checkbox || column.radio) {
+	        type = column.checkbox ? 'checkbox' : type;
+	        type = column.radio ? 'radio' : type;
+	        var c = column['class'] || '';
+	        var isChecked = (value === true || value_ || value && value.checked) && value !== false;
+	        var isDisabled = !column.checkboxEnabled || value && value.disabled;
+	        text = [_this7.options.cardView ? "<div class=\"card-view " + c + "\">" : "<td class=\"bs-checkbox " + c + "\"" + class_ + style_ + ">", "<label>\n            <input\n            data-index=\"" + i + "\"\n            name=\"" + _this7.options.selectItemName + "\"\n            type=\"" + type + "\"\n            " + Utils.sprintf('value="%s"', item[_this7.options.idField]) + "\n            " + Utils.sprintf('checked="%s"', isChecked ? 'checked' : undefined) + "\n            " + Utils.sprintf('disabled="%s"', isDisabled ? 'disabled' : undefined) + " />\n            <span></span>\n            </label>", _this7.header.formatters[j] && typeof value === 'string' ? value : '', _this7.options.cardView ? '</div>' : '</td>'].join('');
+	        item[_this7.header.stateField] = value === true || !!value_ || value && value.checked;
+	      } else {
+	        value = typeof value === 'undefined' || value === null ? _this7.options.undefinedText : value;
+
+	        if (_this7.options.cardView) {
+	          var cardTitle = _this7.options.showHeader ? "<span class=\"card-view-title\"" + style_ + ">" + Utils.getFieldTitle(_this7.columns, field) + "</span>" : '';
+	          text = "<div class=\"card-view\">" + cardTitle + "<span class=\"card-view-value\">" + value + "</span></div>";
+
+	          if (_this7.options.smartDisplay && value === '') {
+	            text = '<div class="card-view"></div>';
+	          }
+	        } else {
+	          text = "<td" + id_ + class_ + style_ + data_ + rowspan_ + colspan_ + title_ + ">" + value + "</td>";
+	        }
+	      }
+
+	      html.push(text);
+	    });
+
+	    if (this.options.cardView) {
+	      html.push('</div></td>');
 	    }
-	  }, {
-	    key: "expandAllRows",
-	    value: function expandAllRows() {
-	      var trs = this.$body.find('> tr[data-index][data-has-detail-view]');
 
-	      for (var i = 0; i < trs.length; i++) {
-	        this.expandRow($(trs[i]).data('index'));
-	      }
+	    html.push('</tr>');
+	    return html.join('');
+	  };
+
+	  _proto.initBody = function initBody(fixedScroll) {
+	    var _this8 = this;
+
+	    var data = this.getData();
+	    this.trigger('pre-body', data);
+	    this.$body = this.$el.find('>tbody');
+
+	    if (!this.$body.length) {
+	      this.$body = $('<tbody></tbody>').appendTo(this.$el);
+	    } // Fix #389 Bootstrap-table-flatJSON is not working
+
+
+	    if (!this.options.pagination || this.options.sidePagination === 'server') {
+	      this.pageFrom = 1;
+	      this.pageTo = data.length;
 	    }
-	  }, {
-	    key: "collapseAllRows",
-	    value: function collapseAllRows() {
-	      var trs = this.$body.find('> tr[data-index][data-has-detail-view]');
 
-	      for (var i = 0; i < trs.length; i++) {
-	        this.collapseRow($(trs[i]).data('index'));
+	    var rows = [];
+	    var trFragments = $(document.createDocumentFragment());
+	    var hasTr = false;
+
+	    for (var i = this.pageFrom - 1; i < this.pageTo; i++) {
+	      var item = data[i];
+	      var tr = this.initRow(item, i, data, trFragments);
+	      hasTr = hasTr || !!tr;
+
+	      if (tr && typeof tr === 'string') {
+	        if (!this.options.virtualScroll) {
+	          trFragments.append(tr);
+	        } else {
+	          rows.push(tr);
+	        }
 	      }
-	    }
-	  }, {
-	    key: "updateColumnTitle",
-	    value: function updateColumnTitle(params) {
-	      if (!params.hasOwnProperty('field') || !params.hasOwnProperty('title')) {
-	        return;
-	      }
+	    } // show no records
 
-	      this.columns[this.fieldsColumnsIndex[params.field]].title = this.options.escape ? Utils.escapeHTML(params.title) : params.title;
 
-	      if (this.columns[this.fieldsColumnsIndex[params.field]].visible) {
-	        var header = this.options.height !== undefined ? this.$tableHeader : this.$header;
-	        header.find('th[data-field]').each(function (i, el) {
-	          if ($(el).data('field') === params.field) {
-	            $($(el).find('.th-inner')[0]).text(params.title);
-	            return false;
+	    if (!hasTr) {
+	      this.$body.html("<tr class=\"no-records-found\">" + Utils.sprintf('<td colspan="%s">%s</td>', this.$header.find('th').length, this.options.formatNoMatches()) + "</tr>");
+	    } else {
+	      if (!this.options.virtualScroll) {
+	        this.$body.html(trFragments);
+	      } else {
+	        if (this.virtualScroll) {
+	          this.virtualScroll.destroy();
+	        }
+
+	        this.virtualScroll = new VirtualScroll({
+	          rows: rows,
+	          fixedScroll: fixedScroll,
+	          scrollEl: this.$tableBody[0],
+	          contentEl: this.$body[0],
+	          itemHeight: this.options.virtualScrollItemHeight,
+	          callback: function callback() {
+	            _this8.fitHeader();
+
+	            _this8.initBodyEvent();
 	          }
 	        });
 	      }
 	    }
-	  }, {
-	    key: "updateFormatText",
-	    value: function updateFormatText(formatName, text) {
-	      if (!/^format/.test(formatName) || !this.options[formatName]) {
+
+	    if (!fixedScroll) {
+	      this.scrollTo(0);
+	    }
+
+	    this.initBodyEvent();
+	    this.updateSelected();
+	    this.initFooter();
+	    this.resetView();
+
+	    if (this.options.sidePagination !== 'server') {
+	      this.options.totalRows = data.length;
+	    }
+
+	    this.trigger('post-body', data);
+	  };
+
+	  _proto.initBodyEvent = function initBodyEvent() {
+	    var _this9 = this;
+
+	    // click to select by column
+	    this.$body.find('> tr[data-index] > td').off('click dblclick').on('click dblclick', function (e) {
+	      var $td = $(e.currentTarget);
+	      var $tr = $td.parent();
+	      var $cardViewArr = $(e.target).parents('.card-views').children();
+	      var $cardViewTarget = $(e.target).parents('.card-view');
+	      var rowIndex = $tr.data('index');
+	      var item = _this9.data[rowIndex];
+	      var index = _this9.options.cardView ? $cardViewArr.index($cardViewTarget) : $td[0].cellIndex;
+
+	      var fields = _this9.getVisibleFields();
+
+	      var field = fields[_this9.options.detailView && _this9.options.detailViewIcon && !_this9.options.cardView ? index - 1 : index];
+	      var column = _this9.columns[_this9.fieldsColumnsIndex[field]];
+	      var value = Utils.getItemField(item, field, _this9.options.escape);
+
+	      if ($td.find('.detail-icon').length) {
 	        return;
 	      }
 
-	      if (typeof text === 'string') {
-	        this.options[formatName] = function () {
-	          return text;
-	        };
-	      } else if (typeof text === 'function') {
-	        this.options[formatName] = text;
+	      _this9.trigger(e.type === 'click' ? 'click-cell' : 'dbl-click-cell', field, value, item, $td);
+
+	      _this9.trigger(e.type === 'click' ? 'click-row' : 'dbl-click-row', item, $tr, field); // if click to select - then trigger the checkbox/radio click
+
+
+	      if (e.type === 'click' && _this9.options.clickToSelect && column.clickToSelect && !Utils.calculateObjectValue(_this9.options, _this9.options.ignoreClickToSelectOn, [e.target])) {
+	        var $selectItem = $tr.find(Utils.sprintf('[name="%s"]', _this9.options.selectItemName));
+
+	        if ($selectItem.length) {
+	          $selectItem[0].click();
+	        }
 	      }
 
-	      this.initToolbar();
-	      this.initPagination();
-	      this.initBody();
+	      if (e.type === 'click' && _this9.options.detailViewByClick) {
+	        _this9.toggleDetailView(rowIndex, _this9.header.detailFormatters[_this9.fieldsColumnsIndex[field]]);
+	      }
+	    }).off('mousedown').on('mousedown', function (e) {
+	      // https://github.com/jquery/jquery/issues/1741
+	      _this9.multipleSelectRowCtrlKey = e.ctrlKey || e.metaKey;
+	      _this9.multipleSelectRowShiftKey = e.shiftKey;
+	    });
+	    this.$body.find('> tr[data-index] > td > .detail-icon').off('click').on('click', function (e) {
+	      e.preventDefault();
+
+	      _this9.toggleDetailView($(e.currentTarget).parent().parent().data('index'));
+
+	      return false;
+	    });
+	    this.$selectItem = this.$body.find(Utils.sprintf('[name="%s"]', this.options.selectItemName));
+	    this.$selectItem.off('click').on('click', function (e) {
+	      e.stopImmediatePropagation();
+	      var $this = $(e.currentTarget);
+
+	      _this9._toggleCheck($this.prop('checked'), $this.data('index'));
+	    });
+	    this.header.events.forEach(function (_events, i) {
+	      var events = _events;
+
+	      if (!events) {
+	        return;
+	      } // fix bug, if events is defined with namespace
+
+
+	      if (typeof events === 'string') {
+	        events = Utils.calculateObjectValue(null, events);
+	      }
+
+	      var field = _this9.header.fields[i];
+
+	      var fieldIndex = _this9.getVisibleFields().indexOf(field);
+
+	      if (fieldIndex === -1) {
+	        return;
+	      }
+
+	      if (_this9.options.detailView && !_this9.options.cardView) {
+	        fieldIndex += 1;
+	      }
+
+	      var _loop = function _loop(key) {
+	        if (!events.hasOwnProperty(key)) {
+	          return "continue";
+	        }
+
+	        var event = events[key];
+
+	        _this9.$body.find('>tr:not(.no-records-found)').each(function (i, tr) {
+	          var $tr = $(tr);
+	          var $td = $tr.find(_this9.options.cardView ? '.card-views>.card-view' : '>td').eq(fieldIndex);
+	          var index = key.indexOf(' ');
+	          var name = key.substring(0, index);
+	          var el = key.substring(index + 1);
+	          $td.find(el).off(name).on(name, function (e) {
+	            var index = $tr.data('index');
+	            var row = _this9.data[index];
+	            var value = row[field];
+	            event.apply(_this9, [e, value, row, index]);
+	          });
+	        });
+	      };
+
+	      for (var key in events) {
+	        var _ret = _loop(key);
+
+	        if (_ret === "continue") continue;
+	      }
+	    });
+	  };
+
+	  _proto.initServer = function initServer(silent, query, url) {
+	    var _this10 = this;
+
+	    var data = {};
+	    var index = this.header.fields.indexOf(this.options.sortName);
+	    var params = {
+	      searchText: this.searchText,
+	      sortName: this.options.sortName,
+	      sortOrder: this.options.sortOrder
+	    };
+
+	    if (this.header.sortNames[index]) {
+	      params.sortName = this.header.sortNames[index];
 	    }
-	  }]);
+
+	    if (this.options.pagination && this.options.sidePagination === 'server') {
+	      params.pageSize = this.options.pageSize === this.options.formatAllRows() ? this.options.totalRows : this.options.pageSize;
+	      params.pageNumber = this.options.pageNumber;
+	    }
+
+	    if (!(url || this.options.url) && !this.options.ajax) {
+	      return;
+	    }
+
+	    if (this.options.queryParamsType === 'limit') {
+	      params = {
+	        search: params.searchText,
+	        sort: params.sortName,
+	        order: params.sortOrder
+	      };
+
+	      if (this.options.pagination && this.options.sidePagination === 'server') {
+	        params.offset = this.options.pageSize === this.options.formatAllRows() ? 0 : this.options.pageSize * (this.options.pageNumber - 1);
+	        params.limit = this.options.pageSize === this.options.formatAllRows() ? this.options.totalRows : this.options.pageSize;
+
+	        if (params.limit === 0) {
+	          delete params.limit;
+	        }
+	      }
+	    }
+
+	    if (!Utils.isEmptyObject(this.filterColumnsPartial)) {
+	      params.filter = JSON.stringify(this.filterColumnsPartial, null);
+	    }
+
+	    $.extend(params, query || {});
+	    data = Utils.calculateObjectValue(this.options, this.options.queryParams, [params], data); // false to stop request
+
+	    if (data === false) {
+	      return;
+	    }
+
+	    if (!silent) {
+	      this.showLoading();
+	    }
+
+	    var request = $.extend({}, Utils.calculateObjectValue(null, this.options.ajaxOptions), {
+	      type: this.options.method,
+	      url: url || this.options.url,
+	      data: this.options.contentType === 'application/json' && this.options.method === 'post' ? JSON.stringify(data) : data,
+	      cache: this.options.cache,
+	      contentType: this.options.contentType,
+	      dataType: this.options.dataType,
+	      success: function success(_res, textStatus, jqXHR) {
+	        var res = Utils.calculateObjectValue(_this10.options, _this10.options.responseHandler, [_res, jqXHR], _res);
+
+	        _this10.load(res);
+
+	        _this10.trigger('load-success', res, jqXHR.status, jqXHR);
+
+	        if (!silent) {
+	          _this10.hideLoading();
+	        }
+	      },
+	      error: function error(jqXHR) {
+	        var data = [];
+
+	        if (_this10.options.sidePagination === 'server') {
+	          data = {};
+	          data[_this10.options.totalField] = 0;
+	          data[_this10.options.dataField] = [];
+	        }
+
+	        _this10.load(data);
+
+	        _this10.trigger('load-error', jqXHR.status, jqXHR);
+
+	        if (!silent) _this10.$tableLoading.hide();
+	      }
+	    });
+
+	    if (this.options.ajax) {
+	      Utils.calculateObjectValue(this, this.options.ajax, [request], null);
+	    } else {
+	      if (this._xhr && this._xhr.readyState !== 4) {
+	        this._xhr.abort();
+	      }
+
+	      this._xhr = $.ajax(request);
+	    }
+
+	    return data;
+	  };
+
+	  _proto.initSearchText = function initSearchText() {
+	    if (this.options.search) {
+	      this.searchText = '';
+
+	      if (this.options.searchText !== '') {
+	        var $search = this.$toolbar.find('.search input');
+	        $search.val(this.options.searchText);
+	        this.onSearch({
+	          currentTarget: $search,
+	          firedByInitSearchText: true
+	        });
+	      }
+	    }
+	  };
+
+	  _proto.getCaret = function getCaret() {
+	    var _this11 = this;
+
+	    this.$header.find('th').each(function (i, th) {
+	      $(th).find('.sortable').removeClass('desc asc').addClass($(th).data('field') === _this11.options.sortName ? _this11.options.sortOrder : 'both');
+	    });
+	  };
+
+	  _proto.updateSelected = function updateSelected() {
+	    var checkAll = this.$selectItem.filter(':enabled').length && this.$selectItem.filter(':enabled').length === this.$selectItem.filter(':enabled').filter(':checked').length;
+	    this.$selectAll.add(this.$selectAll_).prop('checked', checkAll);
+	    this.$selectItem.each(function (i, el) {
+	      $(el).closest('tr')[$(el).prop('checked') ? 'addClass' : 'removeClass']('selected');
+	    });
+	  };
+
+	  _proto.updateRows = function updateRows() {
+	    var _this12 = this;
+
+	    this.$selectItem.each(function (i, el) {
+	      _this12.data[$(el).data('index')][_this12.header.stateField] = $(el).prop('checked');
+	    });
+	  };
+
+	  _proto.resetRows = function resetRows() {
+	    for (var _iterator2 = this.data, _isArray2 = Array.isArray(_iterator2), _i8 = 0, _iterator2 = _isArray2 ? _iterator2 : _iterator2[Symbol.iterator]();;) {
+	      var _ref7;
+
+	      if (_isArray2) {
+	        if (_i8 >= _iterator2.length) break;
+	        _ref7 = _iterator2[_i8++];
+	      } else {
+	        _i8 = _iterator2.next();
+	        if (_i8.done) break;
+	        _ref7 = _i8.value;
+	      }
+
+	      var row = _ref7;
+	      this.$selectAll.prop('checked', false);
+	      this.$selectItem.prop('checked', false);
+
+	      if (this.header.stateField) {
+	        row[this.header.stateField] = false;
+	      }
+	    }
+
+	    this.initHiddenRows();
+	  };
+
+	  _proto.trigger = function trigger(_name) {
+	    var _this$options;
+
+	    var name = _name + ".bs.table";
+
+	    for (var _len = arguments.length, args = new Array(_len > 1 ? _len - 1 : 0), _key4 = 1; _key4 < _len; _key4++) {
+	      args[_key4 - 1] = arguments[_key4];
+	    }
+
+	    (_this$options = this.options)[BootstrapTable.EVENTS[name]].apply(_this$options, args);
+
+	    this.$el.trigger($.Event(name), args);
+	    this.options.onAll(name, args);
+	    this.$el.trigger($.Event('all.bs.table'), [name, args]);
+	  };
+
+	  _proto.resetHeader = function resetHeader() {
+	    var _this13 = this;
+
+	    // fix #61: the hidden table reset header bug.
+	    // fix bug: get $el.css('width') error sometime (height = 500)
+	    clearTimeout(this.timeoutId_);
+	    this.timeoutId_ = setTimeout(function () {
+	      return _this13.fitHeader();
+	    }, this.$el.is(':hidden') ? 100 : 0);
+	  };
+
+	  _proto.fitHeader = function fitHeader() {
+	    var _this14 = this;
+
+	    if (this.$el.is(':hidden')) {
+	      this.timeoutId_ = setTimeout(function () {
+	        return _this14.fitHeader();
+	      }, 100);
+	      return;
+	    }
+
+	    var fixedBody = this.$tableBody.get(0);
+	    var scrollWidth = fixedBody.scrollWidth > fixedBody.clientWidth && fixedBody.scrollHeight > fixedBody.clientHeight + this.$header.outerHeight() ? Utils.getScrollBarWidth() : 0;
+	    this.$el.css('margin-top', -this.$header.outerHeight());
+	    var focused = $(':focus');
+
+	    if (focused.length > 0) {
+	      var $th = focused.parents('th');
+
+	      if ($th.length > 0) {
+	        var dataField = $th.attr('data-field');
+
+	        if (dataField !== undefined) {
+	          var $headerTh = this.$header.find("[data-field='" + dataField + "']");
+
+	          if ($headerTh.length > 0) {
+	            $headerTh.find(':input').addClass('focus-temp');
+	          }
+	        }
+	      }
+	    }
+
+	    this.$header_ = this.$header.clone(true, true);
+	    this.$selectAll_ = this.$header_.find('[name="btSelectAll"]');
+	    this.$tableHeader.css('margin-right', scrollWidth).find('table').css('width', this.$el.outerWidth()).html('').attr('class', this.$el.attr('class')).append(this.$header_);
+	    this.$tableLoading.css('width', this.$el.outerWidth());
+	    var focusedTemp = $('.focus-temp:visible:eq(0)');
+
+	    if (focusedTemp.length > 0) {
+	      focusedTemp.focus();
+	      this.$header.find('.focus-temp').removeClass('focus-temp');
+	    } // fix bug: $.data() is not working as expected after $.append()
+
+
+	    this.$header.find('th[data-field]').each(function (i, el) {
+	      _this14.$header_.find(Utils.sprintf('th[data-field="%s"]', $(el).data('field'))).data($(el).data());
+	    });
+	    var visibleFields = this.getVisibleFields();
+	    var $ths = this.$header_.find('th');
+	    var $tr = this.$body.find('>tr:not(.no-records-found,.virtual-scroll-top)').eq(0);
+
+	    while ($tr.length && $tr.find('>td[colspan]:not([colspan="1"])').length) {
+	      $tr = $tr.next();
+	    }
+
+	    $tr.find('> *').each(function (i, el) {
+	      var $this = $(el);
+	      var index = i;
+
+	      if (_this14.options.detailView && _this14.options.detailViewIcon && !_this14.options.cardView) {
+	        if (i === 0) {
+	          var $thDetail = $ths.filter('.detail');
+
+	          var _zoomWidth = $thDetail.innerWidth() - $thDetail.find('.fht-cell').width();
+
+	          $thDetail.find('.fht-cell').width($this.innerWidth() - _zoomWidth);
+	        }
+
+	        index = i - 1;
+	      }
+
+	      if (index === -1) {
+	        return;
+	      }
+
+	      var $th = _this14.$header_.find(Utils.sprintf('th[data-field="%s"]', visibleFields[index]));
+
+	      if ($th.length > 1) {
+	        $th = $($ths[$this[0].cellIndex]);
+	      }
+
+	      var zoomWidth = $th.innerWidth() - $th.find('.fht-cell').width();
+	      $th.find('.fht-cell').width($this.innerWidth() - zoomWidth);
+	    });
+	    this.horizontalScroll();
+	    this.trigger('post-header');
+	  };
+
+	  _proto.initFooter = function initFooter() {
+	    if (!this.options.showFooter || this.options.cardView) {
+	      // do nothing
+	      return;
+	    }
+
+	    var data = this.getData();
+	    var html = [];
+
+	    if (!this.options.cardView && this.options.detailView && this.options.detailViewIcon) {
+	      html.push('<th class="detail"><div class="th-inner"></div><div class="fht-cell"></div></th>');
+	    }
+
+	    for (var _iterator3 = this.columns, _isArray3 = Array.isArray(_iterator3), _i9 = 0, _iterator3 = _isArray3 ? _iterator3 : _iterator3[Symbol.iterator]();;) {
+	      var _ref8;
+
+	      if (_isArray3) {
+	        if (_i9 >= _iterator3.length) break;
+	        _ref8 = _iterator3[_i9++];
+	      } else {
+	        _i9 = _iterator3.next();
+	        if (_i9.done) break;
+	        _ref8 = _i9.value;
+	      }
+
+	      var column = _ref8;
+	      var falign = '';
+	      var valign = '';
+	      var csses = [];
+	      var style = {};
+	      var class_ = Utils.sprintf(' class="%s"', column['class']);
+
+	      if (!column.visible) {
+	        continue;
+	      }
+
+	      if (this.options.cardView && !column.cardVisible) {
+	        return;
+	      }
+
+	      falign = Utils.sprintf('text-align: %s; ', column.falign ? column.falign : column.align);
+	      valign = Utils.sprintf('vertical-align: %s; ', column.valign);
+	      style = Utils.calculateObjectValue(null, this.options.footerStyle, [column]);
+
+	      if (style && style.css) {
+	        for (var _i10 = 0, _Object$entries6 = Object.entries(style.css); _i10 < _Object$entries6.length; _i10++) {
+	          var _Object$entries6$_i = _Object$entries6[_i10],
+	              key = _Object$entries6$_i[0],
+	              value = _Object$entries6$_i[1];
+	          csses.push(key + ": " + value);
+	        }
+	      }
+
+	      if (style && style.classes) {
+	        class_ = Utils.sprintf(' class="%s"', column['class'] ? [column['class'], style.classes].join(' ') : style.classes);
+	      }
+
+	      html.push('<th', class_, Utils.sprintf(' style="%s"', falign + valign + csses.concat().join('; ')), '>');
+	      html.push('<div class="th-inner">');
+	      html.push(Utils.calculateObjectValue(column, column.footerFormatter, [data], this.footerData[0] && this.footerData[0][column.field] || ''));
+	      html.push('</div>');
+	      html.push('<div class="fht-cell"></div>');
+	      html.push('</div>');
+	      html.push('</th>');
+	    }
+
+	    this.$tableFooter.find('tr').html(html.join(''));
+	    this.trigger('post-footer', this.$tableFooter);
+	  };
+
+	  _proto.fitFooter = function fitFooter() {
+	    var _this15 = this;
+
+	    if (this.$el.is(':hidden')) {
+	      setTimeout(function () {
+	        return _this15.fitFooter();
+	      }, 100);
+	      return;
+	    }
+
+	    var fixedBody = this.$tableBody.get(0);
+	    var scrollWidth = fixedBody.scrollWidth > fixedBody.clientWidth && fixedBody.scrollHeight > fixedBody.clientHeight + this.$header.outerHeight() ? Utils.getScrollBarWidth() : 0;
+	    this.$tableFooter.css('margin-right', scrollWidth).find('table').css('width', this.$el.outerWidth()).attr('class', this.$el.attr('class'));
+	    var visibleFields = this.getVisibleFields();
+	    var $ths = this.$tableFooter.find('th');
+	    var $tr = this.$body.find('>tr:first-child:not(.no-records-found)');
+
+	    while ($tr.length && $tr.find('>td[colspan]:not([colspan="1"])').length) {
+	      $tr = $tr.next();
+	    }
+
+	    $tr.find('> *').each(function (i, el) {
+	      var $this = $(el);
+	      var index = i;
+
+	      if (_this15.options.detailView && !_this15.options.cardView) {
+	        if (i === 0) {
+	          var $thDetail = $ths.filter('.detail');
+
+	          var _zoomWidth2 = $thDetail.innerWidth() - $thDetail.find('.fht-cell').width();
+
+	          $thDetail.find('.fht-cell').width($this.innerWidth() - _zoomWidth2);
+	        }
+
+	        index = i - 1;
+	      }
+
+	      if (index === -1) {
+	        return;
+	      }
+
+	      var $th = $ths.eq(i);
+	      var zoomWidth = $th.innerWidth() - $th.find('.fht-cell').width();
+	      $th.find('.fht-cell').width($this.innerWidth() - zoomWidth);
+	    });
+	    this.horizontalScroll();
+	  };
+
+	  _proto.horizontalScroll = function horizontalScroll() {
+	    var _this16 = this;
+
+	    // horizontal scroll event
+	    // TODO: it's probably better improving the layout than binding to scroll event
+	    this.$tableBody.off('scroll').on('scroll', function (_ref9) {
+	      var currentTarget = _ref9.currentTarget;
+
+	      if (_this16.options.showHeader && _this16.options.height) {
+	        _this16.$tableHeader.scrollLeft($(currentTarget).scrollLeft());
+	      }
+
+	      if (_this16.options.showFooter && !_this16.options.cardView) {
+	        _this16.$tableFooter.scrollLeft($(currentTarget).scrollLeft());
+	      }
+
+	      _this16.trigger('scroll-body', $(currentTarget));
+	    });
+	  };
+
+	  _proto.getVisibleFields = function getVisibleFields() {
+	    var visibleFields = [];
+
+	    for (var _iterator4 = this.header.fields, _isArray4 = Array.isArray(_iterator4), _i11 = 0, _iterator4 = _isArray4 ? _iterator4 : _iterator4[Symbol.iterator]();;) {
+	      var _ref10;
+
+	      if (_isArray4) {
+	        if (_i11 >= _iterator4.length) break;
+	        _ref10 = _iterator4[_i11++];
+	      } else {
+	        _i11 = _iterator4.next();
+	        if (_i11.done) break;
+	        _ref10 = _i11.value;
+	      }
+
+	      var field = _ref10;
+	      var column = this.columns[this.fieldsColumnsIndex[field]];
+
+	      if (!column || !column.visible) {
+	        continue;
+	      }
+
+	      visibleFields.push(field);
+	    }
+
+	    return visibleFields;
+	  };
+
+	  _proto.initHiddenRows = function initHiddenRows() {
+	    this.hiddenRows = [];
+	  } // PUBLIC FUNCTION DEFINITION
+	  // =======================
+	  ;
+
+	  _proto.getOptions = function getOptions() {
+	    // deep copy and remove data
+	    var options = $.extend({}, this.options);
+	    delete options.data;
+	    return $.extend(true, {}, options);
+	  };
+
+	  _proto.refreshOptions = function refreshOptions(options) {
+	    // If the objects are equivalent then avoid the call of destroy / init methods
+	    if (Utils.compareObjects(this.options, options, true)) {
+	      return;
+	    }
+
+	    this.options = $.extend(this.options, options);
+	    this.trigger('refresh-options', this.options);
+	    this.destroy();
+	    this.init();
+	  };
+
+	  _proto.getData = function getData(params) {
+	    var data = this.options.data;
+
+	    if (this.searchText || this.options.sortName || !Utils.isEmptyObject(this.filterColumns) || !Utils.isEmptyObject(this.filterColumnsPartial)) {
+	      data = this.data;
+	    }
+
+	    if (params && params.useCurrentPage) {
+	      data = data.slice(this.pageFrom - 1, this.pageTo);
+	    }
+
+	    if (params && !params.includeHiddenRows) {
+	      var hiddenRows = this.getHiddenRows();
+	      data = data.filter(function (row) {
+	        return Utils.findIndex(hiddenRows, row) === -1;
+	      });
+	    }
+
+	    return data;
+	  };
+
+	  _proto.getSelections = function getSelections() {
+	    var _this17 = this;
+
+	    // fix #2424: from html with checkbox
+	    return this.data.filter(function (row) {
+	      return row[_this17.header.stateField] === true;
+	    });
+	  };
+
+	  _proto.getAllSelections = function getAllSelections() {
+	    var _this18 = this;
+
+	    return this.options.data.filter(function (row) {
+	      return row[_this18.header.stateField] === true;
+	    });
+	  };
+
+	  _proto.load = function load(_data) {
+	    var fixedScroll = false;
+	    var data = _data; // #431: support pagination
+
+	    if (this.options.pagination && this.options.sidePagination === 'server') {
+	      this.options.totalRows = data[this.options.totalField];
+	    }
+
+	    if (this.options.pagination && this.options.sidePagination === 'server') {
+	      this.options.totalNotFiltered = data[this.options.totalNotFilteredField];
+	    }
+
+	    fixedScroll = data.fixedScroll;
+	    data = Array.isArray(data) ? data : data[this.options.dataField];
+	    this.initData(data);
+	    this.initSearch();
+	    this.initPagination();
+	    this.initBody(fixedScroll);
+	  };
+
+	  _proto.append = function append(data) {
+	    this.initData(data, 'append');
+	    this.initSearch();
+	    this.initPagination();
+	    this.initSort();
+	    this.initBody(true);
+	  };
+
+	  _proto.prepend = function prepend(data) {
+	    this.initData(data, 'prepend');
+	    this.initSearch();
+	    this.initPagination();
+	    this.initSort();
+	    this.initBody(true);
+	  };
+
+	  _proto.remove = function remove(params) {
+	    var len = this.options.data.length;
+	    var i;
+	    var row;
+
+	    if (!params.hasOwnProperty('field') || !params.hasOwnProperty('values')) {
+	      return;
+	    }
+
+	    for (i = len - 1; i >= 0; i--) {
+	      row = this.options.data[i];
+
+	      if (!row.hasOwnProperty(params.field)) {
+	        continue;
+	      }
+
+	      if (params.values.includes(row[params.field])) {
+	        this.options.data.splice(i, 1);
+
+	        if (this.options.sidePagination === 'server') {
+	          this.options.totalRows -= 1;
+	        }
+	      }
+	    }
+
+	    if (len === this.options.data.length) {
+	      return;
+	    }
+
+	    this.initSearch();
+	    this.initPagination();
+	    this.initSort();
+	    this.initBody(true);
+	  };
+
+	  _proto.removeAll = function removeAll() {
+	    if (this.options.data.length > 0) {
+	      this.options.data.splice(0, this.options.data.length);
+	      this.initSearch();
+	      this.initPagination();
+	      this.initBody(true);
+	    }
+	  };
+
+	  _proto.insertRow = function insertRow(params) {
+	    if (!params.hasOwnProperty('index') || !params.hasOwnProperty('row')) {
+	      return;
+	    }
+
+	    this.options.data.splice(params.index, 0, params.row);
+	    this.initSearch();
+	    this.initPagination();
+	    this.initSort();
+	    this.initBody(true);
+	  };
+
+	  _proto.updateRow = function updateRow(params) {
+	    var allParams = Array.isArray(params) ? params : [params];
+
+	    for (var _iterator5 = allParams, _isArray5 = Array.isArray(_iterator5), _i12 = 0, _iterator5 = _isArray5 ? _iterator5 : _iterator5[Symbol.iterator]();;) {
+	      var _ref11;
+
+	      if (_isArray5) {
+	        if (_i12 >= _iterator5.length) break;
+	        _ref11 = _iterator5[_i12++];
+	      } else {
+	        _i12 = _iterator5.next();
+	        if (_i12.done) break;
+	        _ref11 = _i12.value;
+	      }
+
+	      var _params = _ref11;
+
+	      if (!_params.hasOwnProperty('index') || !_params.hasOwnProperty('row')) {
+	        continue;
+	      }
+
+	      $.extend(this.options.data[_params.index], _params.row);
+
+	      if (_params.hasOwnProperty('replace') && _params.replace) {
+	        this.options.data[_params.index] = _params.row;
+	      } else {
+	        $.extend(this.options.data[_params.index], _params.row);
+	      }
+	    }
+
+	    this.initSearch();
+	    this.initPagination();
+	    this.initSort();
+	    this.initBody(true);
+	  };
+
+	  _proto.getRowByUniqueId = function getRowByUniqueId(_id) {
+	    var uniqueId = this.options.uniqueId;
+	    var len = this.options.data.length;
+	    var id = _id;
+	    var dataRow = null;
+	    var i;
+	    var row;
+	    var rowUniqueId;
+
+	    for (i = len - 1; i >= 0; i--) {
+	      row = this.options.data[i];
+
+	      if (row.hasOwnProperty(uniqueId)) {
+	        // uniqueId is a column
+	        rowUniqueId = row[uniqueId];
+	      } else if (row._data && row._data.hasOwnProperty(uniqueId)) {
+	        // uniqueId is a row data property
+	        rowUniqueId = row._data[uniqueId];
+	      } else {
+	        continue;
+	      }
+
+	      if (typeof rowUniqueId === 'string') {
+	        id = id.toString();
+	      } else if (typeof rowUniqueId === 'number') {
+	        if (Number(rowUniqueId) === rowUniqueId && rowUniqueId % 1 === 0) {
+	          id = parseInt(id);
+	        } else if (rowUniqueId === Number(rowUniqueId) && rowUniqueId !== 0) {
+	          id = parseFloat(id);
+	        }
+	      }
+
+	      if (rowUniqueId === id) {
+	        dataRow = row;
+	        break;
+	      }
+	    }
+
+	    return dataRow;
+	  };
+
+	  _proto.updateByUniqueId = function updateByUniqueId(params) {
+	    var allParams = Array.isArray(params) ? params : [params];
+
+	    for (var _iterator6 = allParams, _isArray6 = Array.isArray(_iterator6), _i13 = 0, _iterator6 = _isArray6 ? _iterator6 : _iterator6[Symbol.iterator]();;) {
+	      var _ref12;
+
+	      if (_isArray6) {
+	        if (_i13 >= _iterator6.length) break;
+	        _ref12 = _iterator6[_i13++];
+	      } else {
+	        _i13 = _iterator6.next();
+	        if (_i13.done) break;
+	        _ref12 = _i13.value;
+	      }
+
+	      var _params2 = _ref12;
+
+	      if (!_params2.hasOwnProperty('id') || !_params2.hasOwnProperty('row')) {
+	        continue;
+	      }
+
+	      var rowId = this.options.data.indexOf(this.getRowByUniqueId(_params2.id));
+
+	      if (rowId === -1) {
+	        continue;
+	      }
+
+	      if (_params2.hasOwnProperty('replace') && _params2.replace) {
+	        this.options.data[rowId] = _params2.row;
+	      } else {
+	        $.extend(this.options.data[rowId], _params2.row);
+	      }
+	    }
+
+	    this.initSearch();
+	    this.initPagination();
+	    this.initSort();
+	    this.initBody(true);
+	  };
+
+	  _proto.removeByUniqueId = function removeByUniqueId(id) {
+	    var len = this.options.data.length;
+	    var row = this.getRowByUniqueId(id);
+
+	    if (row) {
+	      this.options.data.splice(this.options.data.indexOf(row), 1);
+	    }
+
+	    if (len === this.options.data.length) {
+	      return;
+	    }
+
+	    this.initSearch();
+	    this.initPagination();
+	    this.initBody(true);
+	  };
+
+	  _proto.updateCell = function updateCell(params) {
+	    if (!params.hasOwnProperty('index') || !params.hasOwnProperty('field') || !params.hasOwnProperty('value')) {
+	      return;
+	    }
+
+	    this.data[params.index][params.field] = params.value;
+
+	    if (params.reinit === false) {
+	      return;
+	    }
+
+	    this.initSort();
+	    this.initBody(true);
+	  };
+
+	  _proto.updateCellByUniqueId = function updateCellByUniqueId(params) {
+	    var _this19 = this;
+
+	    if (!params.hasOwnProperty('id') || !params.hasOwnProperty('field') || !params.hasOwnProperty('value')) {
+	      return;
+	    }
+
+	    var allParams = Array.isArray(params) ? params : [params];
+	    allParams.forEach(function (_ref13) {
+	      var id = _ref13.id,
+	          field = _ref13.field,
+	          value = _ref13.value;
+
+	      var rowId = _this19.options.data.indexOf(_this19.getRowByUniqueId(id));
+
+	      if (rowId === -1) {
+	        return;
+	      }
+
+	      _this19.options.data[rowId][field] = value;
+	    });
+
+	    if (params.reinit === false) {
+	      return;
+	    }
+
+	    this.initSort();
+	    this.initBody(true);
+	  };
+
+	  _proto.showRow = function showRow(params) {
+	    this._toggleRow(params, true);
+	  };
+
+	  _proto.hideRow = function hideRow(params) {
+	    this._toggleRow(params, false);
+	  };
+
+	  _proto._toggleRow = function _toggleRow(params, visible) {
+	    var row;
+
+	    if (params.hasOwnProperty('index')) {
+	      row = this.getData()[params.index];
+	    } else if (params.hasOwnProperty('uniqueId')) {
+	      row = this.getRowByUniqueId(params.uniqueId);
+	    }
+
+	    if (!row) {
+	      return;
+	    }
+
+	    var index = Utils.findIndex(this.hiddenRows, row);
+
+	    if (!visible && index === -1) {
+	      this.hiddenRows.push(row);
+	    } else if (visible && index > -1) {
+	      this.hiddenRows.splice(index, 1);
+	    }
+
+	    if (visible) {
+	      this.updatePagination();
+	    } else {
+	      this.initBody(true);
+	      this.initPagination();
+	    }
+	  };
+
+	  _proto.getHiddenRows = function getHiddenRows(show) {
+	    if (show) {
+	      this.initHiddenRows();
+	      this.initBody(true);
+	      return;
+	    }
+
+	    var data = this.getData();
+	    var rows = [];
+
+	    for (var _iterator7 = data, _isArray7 = Array.isArray(_iterator7), _i14 = 0, _iterator7 = _isArray7 ? _iterator7 : _iterator7[Symbol.iterator]();;) {
+	      var _ref14;
+
+	      if (_isArray7) {
+	        if (_i14 >= _iterator7.length) break;
+	        _ref14 = _iterator7[_i14++];
+	      } else {
+	        _i14 = _iterator7.next();
+	        if (_i14.done) break;
+	        _ref14 = _i14.value;
+	      }
+
+	      var row = _ref14;
+
+	      if (this.hiddenRows.includes(row)) {
+	        rows.push(row);
+	      }
+	    }
+
+	    this.hiddenRows = rows;
+	    return rows;
+	  };
+
+	  _proto.showColumn = function showColumn(field) {
+	    var _this20 = this;
+
+	    var fields = Array.isArray(field) ? field : [field];
+	    fields.forEach(function (field) {
+	      _this20._toggleColumn(_this20.fieldsColumnsIndex[field], true, true);
+	    });
+	  };
+
+	  _proto.hideColumn = function hideColumn(field) {
+	    var _this21 = this;
+
+	    var fields = Array.isArray(field) ? field : [field];
+	    fields.forEach(function (field) {
+	      _this21._toggleColumn(_this21.fieldsColumnsIndex[field], false, true);
+	    });
+	  };
+
+	  _proto._toggleColumn = function _toggleColumn(index, checked, needUpdate) {
+	    if (index === -1 || this.columns[index].visible === checked) {
+	      return;
+	    }
+
+	    this.columns[index].visible = checked;
+	    this.initHeader();
+	    this.initSearch();
+	    this.initPagination();
+	    this.initBody();
+
+	    if (this.options.showColumns) {
+	      var $items = this.$toolbar.find('.keep-open input').prop('disabled', false);
+
+	      if (needUpdate) {
+	        $items.filter(Utils.sprintf('[value="%s"]', index)).prop('checked', checked);
+	      }
+
+	      if ($items.filter(':checked').length <= this.options.minimumCountColumns) {
+	        $items.filter(':checked').prop('disabled', true);
+	      }
+	    }
+	  };
+
+	  _proto.getVisibleColumns = function getVisibleColumns() {
+	    return this.columns.filter(function (_ref15) {
+	      var visible = _ref15.visible;
+	      return visible;
+	    });
+	  };
+
+	  _proto.getHiddenColumns = function getHiddenColumns() {
+	    return this.columns.filter(function (_ref16) {
+	      var visible = _ref16.visible;
+	      return !visible;
+	    });
+	  };
+
+	  _proto.showAllColumns = function showAllColumns() {
+	    this._toggleAllColumns(true);
+	  };
+
+	  _proto.hideAllColumns = function hideAllColumns() {
+	    this._toggleAllColumns(false);
+	  };
+
+	  _proto._toggleAllColumns = function _toggleAllColumns(visible) {
+	    var _this22 = this;
+
+	    for (var _iterator8 = this.columns.slice().reverse(), _isArray8 = Array.isArray(_iterator8), _i15 = 0, _iterator8 = _isArray8 ? _iterator8 : _iterator8[Symbol.iterator]();;) {
+	      var _ref17;
+
+	      if (_isArray8) {
+	        if (_i15 >= _iterator8.length) break;
+	        _ref17 = _iterator8[_i15++];
+	      } else {
+	        _i15 = _iterator8.next();
+	        if (_i15.done) break;
+	        _ref17 = _i15.value;
+	      }
+
+	      var column = _ref17;
+
+	      if (column.switchable) {
+	        if (!visible && this.options.showColumns && this.getVisibleColumns().length === this.options.minimumCountColumns) {
+	          continue;
+	        }
+
+	        column.visible = visible;
+	      }
+	    }
+
+	    this.initHeader();
+	    this.initSearch();
+	    this.initPagination();
+	    this.initBody();
+
+	    if (this.options.showColumns) {
+	      var $items = this.$toolbar.find('.keep-open input:not(".toggle-all")').prop('disabled', false);
+
+	      if (visible) {
+	        $items.prop('checked', visible);
+	      } else {
+	        $items.get().reverse().forEach(function (item) {
+	          if ($items.filter(':checked').length > _this22.options.minimumCountColumns) {
+	            $(item).prop('checked', visible);
+	          }
+	        });
+	      }
+
+	      if ($items.filter(':checked').length <= this.options.minimumCountColumns) {
+	        $items.filter(':checked').prop('disabled', true);
+	      }
+	    }
+	  };
+
+	  _proto.mergeCells = function mergeCells(options) {
+	    var row = options.index;
+	    var col = this.getVisibleFields().indexOf(options.field);
+	    var rowspan = options.rowspan || 1;
+	    var colspan = options.colspan || 1;
+	    var i;
+	    var j;
+	    var $tr = this.$body.find('>tr');
+
+	    if (this.options.detailView && !this.options.cardView) {
+	      col += 1;
+	    }
+
+	    var $td = $tr.eq(row).find('>td').eq(col);
+
+	    if (row < 0 || col < 0 || row >= this.data.length) {
+	      return;
+	    }
+
+	    for (i = row; i < row + rowspan; i++) {
+	      for (j = col; j < col + colspan; j++) {
+	        $tr.eq(i).find('>td').eq(j).hide();
+	      }
+	    }
+
+	    $td.attr('rowspan', rowspan).attr('colspan', colspan).show();
+	  };
+
+	  _proto.checkAll = function checkAll() {
+	    this._toggleCheckAll(true);
+	  };
+
+	  _proto.uncheckAll = function uncheckAll() {
+	    this._toggleCheckAll(false);
+	  };
+
+	  _proto._toggleCheckAll = function _toggleCheckAll(checked) {
+	    var rowsBefore = this.getSelections();
+	    this.$selectAll.add(this.$selectAll_).prop('checked', checked);
+	    this.$selectItem.filter(':enabled').prop('checked', checked);
+	    this.updateRows();
+	    var rowsAfter = this.getSelections();
+
+	    if (checked) {
+	      this.trigger('check-all', rowsAfter, rowsBefore);
+	      return;
+	    }
+
+	    this.trigger('uncheck-all', rowsAfter, rowsBefore);
+	  };
+
+	  _proto.checkInvert = function checkInvert() {
+	    var $items = this.$selectItem.filter(':enabled');
+	    var checked = $items.filter(':checked');
+	    $items.each(function (i, el) {
+	      $(el).prop('checked', !$(el).prop('checked'));
+	    });
+	    this.updateRows();
+	    this.updateSelected();
+	    this.trigger('uncheck-some', checked);
+	    checked = this.getSelections();
+	    this.trigger('check-some', checked);
+	  };
+
+	  _proto.check = function check(index) {
+	    this._toggleCheck(true, index);
+	  };
+
+	  _proto.uncheck = function uncheck(index) {
+	    this._toggleCheck(false, index);
+	  };
+
+	  _proto._toggleCheck = function _toggleCheck(checked, index) {
+	    var $el = this.$selectItem.filter("[data-index=\"" + index + "\"]");
+	    var row = this.data[index];
+
+	    if ($el.is(':radio') || this.options.singleSelect || this.options.multipleSelectRow && !this.multipleSelectRowCtrlKey && !this.multipleSelectRowShiftKey) {
+	      for (var _iterator9 = this.options.data, _isArray9 = Array.isArray(_iterator9), _i16 = 0, _iterator9 = _isArray9 ? _iterator9 : _iterator9[Symbol.iterator]();;) {
+	        var _ref18;
+
+	        if (_isArray9) {
+	          if (_i16 >= _iterator9.length) break;
+	          _ref18 = _iterator9[_i16++];
+	        } else {
+	          _i16 = _iterator9.next();
+	          if (_i16.done) break;
+	          _ref18 = _i16.value;
+	        }
+
+	        var r = _ref18;
+	        r[this.header.stateField] = false;
+	      }
+
+	      this.$selectItem.filter(':checked').not($el).prop('checked', false);
+	    }
+
+	    row[this.header.stateField] = checked;
+
+	    if (this.options.multipleSelectRow) {
+	      if (this.multipleSelectRowShiftKey && this.multipleSelectRowLastSelectedIndex >= 0) {
+	        var indexes = [this.multipleSelectRowLastSelectedIndex, index].sort();
+
+	        for (var i = indexes[0] + 1; i < indexes[1]; i++) {
+	          this.data[i][this.header.stateField] = true;
+	          this.$selectItem.filter("[data-index=\"" + i + "\"]").prop('checked', true);
+	        }
+	      }
+
+	      this.multipleSelectRowCtrlKey = false;
+	      this.multipleSelectRowShiftKey = false;
+	      this.multipleSelectRowLastSelectedIndex = checked ? index : -1;
+	    }
+
+	    $el.prop('checked', checked);
+	    this.updateSelected();
+	    this.trigger(checked ? 'check' : 'uncheck', this.data[index], $el);
+	  };
+
+	  _proto.checkBy = function checkBy(obj) {
+	    this._toggleCheckBy(true, obj);
+	  };
+
+	  _proto.uncheckBy = function uncheckBy(obj) {
+	    this._toggleCheckBy(false, obj);
+	  };
+
+	  _proto._toggleCheckBy = function _toggleCheckBy(checked, obj) {
+	    var _this23 = this;
+
+	    if (!obj.hasOwnProperty('field') || !obj.hasOwnProperty('values')) {
+	      return;
+	    }
+
+	    var rows = [];
+	    this.data.forEach(function (row, i) {
+	      if (!row.hasOwnProperty(obj.field)) {
+	        return false;
+	      }
+
+	      if (obj.values.includes(row[obj.field])) {
+	        var $el = _this23.$selectItem.filter(':enabled').filter(Utils.sprintf('[data-index="%s"]', i));
+
+	        $el = checked ? $el.not(':checked') : $el.filter(':checked');
+
+	        if (!$el.length) {
+	          return;
+	        }
+
+	        $el.prop('checked', checked);
+	        row[_this23.header.stateField] = checked;
+	        rows.push(row);
+
+	        _this23.trigger(checked ? 'check' : 'uncheck', row, $el);
+	      }
+	    });
+	    this.updateSelected();
+	    this.trigger(checked ? 'check-some' : 'uncheck-some', rows);
+	  };
+
+	  _proto.refresh = function refresh(params) {
+	    if (params && params.url) {
+	      this.options.url = params.url;
+	    }
+
+	    if (params && params.pageNumber) {
+	      this.options.pageNumber = params.pageNumber;
+	    }
+
+	    if (params && params.pageSize) {
+	      this.options.pageSize = params.pageSize;
+	    }
+
+	    this.trigger('refresh', this.initServer(params && params.silent, params && params.query, params && params.url));
+	  };
+
+	  _proto.destroy = function destroy() {
+	    this.$el.insertBefore(this.$container);
+	    $(this.options.toolbar).insertBefore(this.$el);
+	    this.$container.next().remove();
+	    this.$container.remove();
+	    this.$el.html(this.$el_.html()).css('margin-top', '0').attr('class', this.$el_.attr('class') || ''); // reset the class
+	  };
+
+	  _proto.resetView = function resetView(params) {
+	    var padding = 0;
+
+	    if (params && params.height) {
+	      this.options.height = params.height;
+	    }
+
+	    this.$selectAll.prop('checked', this.$selectItem.length > 0 && this.$selectItem.length === this.$selectItem.filter(':checked').length);
+	    this.$tableContainer.toggleClass('has-card-view', this.options.cardView);
+
+	    if (!this.options.cardView && this.options.showHeader && this.options.height) {
+	      this.$tableHeader.show();
+	      this.resetHeader();
+	      padding += this.$header.outerHeight(true) + 1;
+	    } else {
+	      this.$tableHeader.hide();
+	      this.trigger('post-header');
+	    }
+
+	    if (!this.options.cardView && this.options.showFooter) {
+	      this.$tableFooter.show();
+	      this.fitFooter();
+
+	      if (this.options.height) {
+	        padding += this.$tableFooter.outerHeight(true);
+	      }
+	    }
+
+	    if (this.options.height) {
+	      var toolbarHeight = this.$toolbar.outerHeight(true);
+	      var paginationHeight = this.$pagination.outerHeight(true);
+	      var height = this.options.height - toolbarHeight - paginationHeight;
+	      var $bodyTable = this.$tableBody.find('>table');
+	      var tableHeight = $bodyTable.outerHeight();
+	      this.$tableContainer.css('height', height + "px");
+
+	      if (this.$tableBorder) {
+	        var tableBorderHeight = height - tableHeight - 2;
+
+	        if (this.$tableBody[0].scrollWidth - this.$tableBody.innerWidth()) {
+	          tableBorderHeight -= Utils.getScrollBarWidth();
+	        }
+
+	        this.$tableBorder.css('width', $bodyTable.outerWidth() + "px");
+	        this.$tableBorder.css('height', tableBorderHeight + "px");
+	      }
+	    }
+
+	    if (this.options.cardView) {
+	      // remove the element css
+	      this.$el.css('margin-top', '0');
+	      this.$tableContainer.css('padding-bottom', '0');
+	      this.$tableFooter.hide();
+	    } else {
+	      // Assign the correct sortable arrow
+	      this.getCaret();
+	      this.$tableContainer.css('padding-bottom', padding + "px");
+	    }
+
+	    this.trigger('reset-view');
+	  };
+
+	  _proto.resetWidth = function resetWidth() {
+	    if (this.options.showHeader && this.options.height) {
+	      this.fitHeader();
+	    }
+
+	    if (this.options.showFooter && !this.options.cardView) {
+	      this.fitFooter();
+	    }
+	  };
+
+	  _proto.showLoading = function showLoading() {
+	    this.$tableLoading.css('display', 'flex');
+	  };
+
+	  _proto.hideLoading = function hideLoading() {
+	    this.$tableLoading.css('display', 'none');
+	  };
+
+	  _proto.togglePagination = function togglePagination() {
+	    this.options.pagination = !this.options.pagination;
+	    var icon = this.options.showButtonIcons ? this.options.pagination ? this.options.icons.paginationSwitchDown : this.options.icons.paginationSwitchUp : '';
+	    var text = this.options.showButtonText ? this.options.pagination ? this.options.formatPaginationSwitchUp() : this.options.formatPaginationSwitchDown() : '';
+	    this.$toolbar.find('button[name="paginationSwitch"]').html(Utils.sprintf(this.constants.html.icon, this.options.iconsPrefix, icon) + ' ' + text);
+	    this.updatePagination();
+	  };
+
+	  _proto.toggleFullscreen = function toggleFullscreen() {
+	    this.$el.closest('.bootstrap-table').toggleClass('fullscreen');
+	    this.resetView();
+	  };
+
+	  _proto.toggleView = function toggleView() {
+	    this.options.cardView = !this.options.cardView;
+	    this.initHeader();
+	    var icon = this.options.showButtonIcons ? this.options.cardView ? this.options.icons.toggleOn : this.options.icons.toggleOff : '';
+	    var text = this.options.showButtonText ? this.options.cardView ? this.options.formatToggleOff() : this.options.formatToggleOn() : '';
+	    this.$toolbar.find('button[name="toggle"]').html(Utils.sprintf(this.constants.html.icon, this.options.iconsPrefix, icon) + ' ' + text);
+	    this.initBody();
+	    this.trigger('toggle', this.options.cardView);
+	  };
+
+	  _proto.resetSearch = function resetSearch(text) {
+	    var $search = this.$toolbar.find('.search input');
+	    $search.val(text || '');
+	    this.onSearch({
+	      currentTarget: $search
+	    });
+	  };
+
+	  _proto.filterBy = function filterBy(columns, options) {
+	    this.filterOptions = Utils.isEmptyObject(options) ? this.options.filterOptions : $.extend(this.options.filterOptions, options);
+	    this.filterColumns = Utils.isEmptyObject(columns) ? {} : columns;
+	    this.options.pageNumber = 1;
+	    this.initSearch();
+	    this.updatePagination();
+	  };
+
+	  _proto.scrollTo = function scrollTo(params) {
+	    if (typeof params === 'undefined') {
+	      return this.$tableBody.scrollTop();
+	    }
+
+	    var options = {
+	      unit: 'px',
+	      value: 0
+	    };
+
+	    if (typeof params === 'object') {
+	      options = Object.assign(options, params);
+	    } else if (typeof params === 'string' && params === 'bottom') {
+	      options.value = this.$tableBody[0].scrollHeight;
+	    } else if (typeof params === 'string') {
+	      options.value = params;
+	    }
+
+	    var scrollTo = options.value;
+
+	    if (options.unit === 'rows') {
+	      scrollTo = 0;
+	      this.$body.find("> tr:lt(" + options.value + ")").each(function (i, el) {
+	        scrollTo += $(el).outerHeight(true);
+	      });
+	    }
+
+	    this.$tableBody.scrollTop(scrollTo);
+	  };
+
+	  _proto.getScrollPosition = function getScrollPosition() {
+	    return this.scrollTo();
+	  };
+
+	  _proto.selectPage = function selectPage(page) {
+	    if (page > 0 && page <= this.options.totalPages) {
+	      this.options.pageNumber = page;
+	      this.updatePagination();
+	    }
+	  };
+
+	  _proto.prevPage = function prevPage() {
+	    if (this.options.pageNumber > 1) {
+	      this.options.pageNumber--;
+	      this.updatePagination();
+	    }
+	  };
+
+	  _proto.nextPage = function nextPage() {
+	    if (this.options.pageNumber < this.options.totalPages) {
+	      this.options.pageNumber++;
+	      this.updatePagination();
+	    }
+	  };
+
+	  _proto.toggleDetailView = function toggleDetailView(index, _columnDetailFormatter) {
+	    var $tr = this.$body.find(Utils.sprintf('> tr[data-index="%s"]', index));
+
+	    if ($tr.next().is('tr.detail-view')) {
+	      this.collapseRow(index);
+	    } else {
+	      this.expandRow(index, _columnDetailFormatter);
+	    }
+
+	    this.resetView();
+	  };
+
+	  _proto.expandRow = function expandRow(index, _columnDetailFormatter) {
+	    var row = this.data[index];
+	    var $tr = this.$body.find(Utils.sprintf('> tr[data-index="%s"][data-has-detail-view]', index));
+
+	    if ($tr.next().is('tr.detail-view')) {
+	      return;
+	    }
+
+	    if (this.options.detailViewIcon) {
+	      $tr.find('a.detail-icon').html(Utils.sprintf(this.constants.html.icon, this.options.iconsPrefix, this.options.icons.detailClose));
+	    }
+
+	    $tr.after(Utils.sprintf('<tr class="detail-view"><td colspan="%s"></td></tr>', $tr.children('td').length));
+	    var $element = $tr.next().find('td');
+	    var detailFormatter = _columnDetailFormatter || this.options.detailFormatter;
+	    var content = Utils.calculateObjectValue(this.options, detailFormatter, [index, row, $element], '');
+
+	    if ($element.length === 1) {
+	      $element.append(content);
+	    }
+
+	    this.trigger('expand-row', index, row, $element);
+	  };
+
+	  _proto.collapseRow = function collapseRow(index) {
+	    var row = this.data[index];
+	    var $tr = this.$body.find(Utils.sprintf('> tr[data-index="%s"][data-has-detail-view]', index));
+
+	    if (!$tr.next().is('tr.detail-view')) {
+	      return;
+	    }
+
+	    if (this.options.detailViewIcon) {
+	      $tr.find('a.detail-icon').html(Utils.sprintf(this.constants.html.icon, this.options.iconsPrefix, this.options.icons.detailOpen));
+	    }
+
+	    this.trigger('collapse-row', index, row, $tr.next());
+	    $tr.next().remove();
+	  };
+
+	  _proto.expandAllRows = function expandAllRows() {
+	    var trs = this.$body.find('> tr[data-index][data-has-detail-view]');
+
+	    for (var i = 0; i < trs.length; i++) {
+	      this.expandRow($(trs[i]).data('index'));
+	    }
+	  };
+
+	  _proto.collapseAllRows = function collapseAllRows() {
+	    var trs = this.$body.find('> tr[data-index][data-has-detail-view]');
+
+	    for (var i = 0; i < trs.length; i++) {
+	      this.collapseRow($(trs[i]).data('index'));
+	    }
+	  };
+
+	  _proto.updateColumnTitle = function updateColumnTitle(params) {
+	    if (!params.hasOwnProperty('field') || !params.hasOwnProperty('title')) {
+	      return;
+	    }
+
+	    this.columns[this.fieldsColumnsIndex[params.field]].title = this.options.escape ? Utils.escapeHTML(params.title) : params.title;
+
+	    if (this.columns[this.fieldsColumnsIndex[params.field]].visible) {
+	      var header = this.options.height !== undefined ? this.$tableHeader : this.$header;
+	      header.find('th[data-field]').each(function (i, el) {
+	        if ($(el).data('field') === params.field) {
+	          $($(el).find('.th-inner')[0]).text(params.title);
+	          return false;
+	        }
+	      });
+	    }
+	  };
+
+	  _proto.updateFormatText = function updateFormatText(formatName, text) {
+	    if (!/^format/.test(formatName) || !this.options[formatName]) {
+	      return;
+	    }
+
+	    if (typeof text === 'string') {
+	      this.options[formatName] = function () {
+	        return text;
+	      };
+	    } else if (typeof text === 'function') {
+	      this.options[formatName] = text;
+	    }
+
+	    this.initToolbar();
+	    this.initPagination();
+	    this.initBody();
+	  };
 
 	  return BootstrapTable;
 	}();
@@ -6905,20 +6675,20 @@
 	$.BootstrapTable = BootstrapTable;
 
 	$.fn.bootstrapTable = function (option) {
-	  for (var _len2 = arguments.length, args = new Array(_len2 > 1 ? _len2 - 1 : 0), _key3 = 1; _key3 < _len2; _key3++) {
-	    args[_key3 - 1] = arguments[_key3];
+	  for (var _len2 = arguments.length, args = new Array(_len2 > 1 ? _len2 - 1 : 0), _key5 = 1; _key5 < _len2; _key5++) {
+	    args[_key5 - 1] = arguments[_key5];
 	  }
 
 	  var value;
 	  this.each(function (i, el) {
 	    var data = $(el).data('bootstrap.table');
-	    var options = $.extend({}, BootstrapTable.DEFAULTS, $(el).data(), _typeof(option) === 'object' && option);
+	    var options = $.extend({}, BootstrapTable.DEFAULTS, $(el).data(), typeof option === 'object' && option);
 
 	    if (typeof option === 'string') {
 	      var _data2;
 
 	      if (!Constants.METHODS.includes(option)) {
-	        throw new Error("Unknown method: ".concat(option));
+	        throw new Error("Unknown method: " + option);
 	      }
 
 	      if (!data) {

@@ -12,7 +12,6 @@
 		return module = { exports: {} }, fn(module, module.exports), module.exports;
 	}
 
-	var O = 'object';
 	var check = function (it) {
 	  return it && it.Math == Math && it;
 	};
@@ -20,10 +19,10 @@
 	// https://github.com/zloirock/core-js/issues/86#issuecomment-115759028
 	var global_1 =
 	  // eslint-disable-next-line no-undef
-	  check(typeof globalThis == O && globalThis) ||
-	  check(typeof window == O && window) ||
-	  check(typeof self == O && self) ||
-	  check(typeof commonjsGlobal == O && commonjsGlobal) ||
+	  check(typeof globalThis == 'object' && globalThis) ||
+	  check(typeof window == 'object' && window) ||
+	  check(typeof self == 'object' && self) ||
+	  check(typeof commonjsGlobal == 'object' && commonjsGlobal) ||
 	  // eslint-disable-next-line no-new-func
 	  Function('return this')();
 
@@ -179,7 +178,7 @@
 		f: f$2
 	};
 
-	var hide = descriptors ? function (object, key, value) {
+	var createNonEnumerableProperty = descriptors ? function (object, key, value) {
 	  return objectDefineProperty.f(object, key, createPropertyDescriptor(1, value));
 	} : function (object, key, value) {
 	  object[key] = value;
@@ -188,20 +187,22 @@
 
 	var setGlobal = function (key, value) {
 	  try {
-	    hide(global_1, key, value);
+	    createNonEnumerableProperty(global_1, key, value);
 	  } catch (error) {
 	    global_1[key] = value;
 	  } return value;
 	};
 
-	var shared = createCommonjsModule(function (module) {
 	var SHARED = '__core-js_shared__';
 	var store = global_1[SHARED] || setGlobal(SHARED, {});
 
+	var sharedStore = store;
+
+	var shared = createCommonjsModule(function (module) {
 	(module.exports = function (key, value) {
-	  return store[key] || (store[key] = value !== undefined ? value : {});
+	  return sharedStore[key] || (sharedStore[key] = value !== undefined ? value : {});
 	})('versions', []).push({
-	  version: '3.1.3',
+	  version: '3.3.2',
 	  mode:  'global',
 	  copyright: '© 2019 Denis Pushkarev (zloirock.ru)'
 	});
@@ -245,25 +246,25 @@
 	};
 
 	if (nativeWeakMap) {
-	  var store = new WeakMap$1();
-	  var wmget = store.get;
-	  var wmhas = store.has;
-	  var wmset = store.set;
+	  var store$1 = new WeakMap$1();
+	  var wmget = store$1.get;
+	  var wmhas = store$1.has;
+	  var wmset = store$1.set;
 	  set = function (it, metadata) {
-	    wmset.call(store, it, metadata);
+	    wmset.call(store$1, it, metadata);
 	    return metadata;
 	  };
 	  get = function (it) {
-	    return wmget.call(store, it) || {};
+	    return wmget.call(store$1, it) || {};
 	  };
 	  has$1 = function (it) {
-	    return wmhas.call(store, it);
+	    return wmhas.call(store$1, it);
 	  };
 	} else {
 	  var STATE = sharedKey('state');
 	  hiddenKeys[STATE] = true;
 	  set = function (it, metadata) {
-	    hide(it, STATE, metadata);
+	    createNonEnumerableProperty(it, STATE, metadata);
 	    return metadata;
 	  };
 	  get = function (it) {
@@ -296,7 +297,7 @@
 	  var simple = options ? !!options.enumerable : false;
 	  var noTargetGet = options ? !!options.noTargetGet : false;
 	  if (typeof value == 'function') {
-	    if (typeof key == 'string' && !has(value, 'name')) hide(value, 'name', key);
+	    if (typeof key == 'string' && !has(value, 'name')) createNonEnumerableProperty(value, 'name', key);
 	    enforceInternalState(value).source = TEMPLATE.join(typeof key == 'string' ? key : '');
 	  }
 	  if (O === global_1) {
@@ -309,7 +310,7 @@
 	    simple = true;
 	  }
 	  if (simple) O[key] = value;
-	  else hide(O, key, value);
+	  else createNonEnumerableProperty(O, key, value);
 	// add fake Function#toString for correct work wrapped methods / constructors with methods like LoDash isNative
 	})(Function.prototype, 'toString', function toString() {
 	  return typeof this == 'function' && getInternalState(this).source || functionToString.call(this);
@@ -513,7 +514,7 @@
 	    }
 	    // add a flag to not completely full polyfills
 	    if (options.sham || (targetProperty && targetProperty.sham)) {
-	      hide(sourceProperty, 'sham', true);
+	      createNonEnumerableProperty(sourceProperty, 'sham', true);
 	    }
 	    // extend global
 	    redefine(target, key, sourceProperty, options);
@@ -545,10 +546,10 @@
 	});
 
 	var Symbol$1 = global_1.Symbol;
-	var store$1 = shared('wks');
+	var store$2 = shared('wks');
 
 	var wellKnownSymbol = function (name) {
-	  return store$1[name] || (store$1[name] = nativeSymbol && Symbol$1[name]
+	  return store$2[name] || (store$2[name] = nativeSymbol && Symbol$1[name]
 	    || (nativeSymbol ? Symbol$1 : uid)('Symbol.' + name));
 	};
 
@@ -785,7 +786,7 @@
 	// Array.prototype[@@unscopables]
 	// https://tc39.github.io/ecma262/#sec-array.prototype-@@unscopables
 	if (ArrayPrototype[UNSCOPABLES] == undefined) {
-	  hide(ArrayPrototype, UNSCOPABLES, objectCreate(null));
+	  createNonEnumerableProperty(ArrayPrototype, UNSCOPABLES, objectCreate(null));
 	}
 
 	// add a key to Array.prototype[@@unscopables]
@@ -813,566 +814,388 @@
 	// https://tc39.github.io/ecma262/#sec-array.prototype-@@unscopables
 	addToUnscopables(FIND);
 
-	// `RegExp.prototype.flags` getter implementation
-	// https://tc39.github.io/ecma262/#sec-get-regexp.prototype.flags
-	var regexpFlags = function () {
-	  var that = anObject(this);
-	  var result = '';
-	  if (that.global) result += 'g';
-	  if (that.ignoreCase) result += 'i';
-	  if (that.multiline) result += 'm';
-	  if (that.dotAll) result += 's';
-	  if (that.unicode) result += 'u';
-	  if (that.sticky) result += 'y';
-	  return result;
-	};
-
-	var nativeExec = RegExp.prototype.exec;
-	// This always refers to the native implementation, because the
-	// String#replace polyfill uses ./fix-regexp-well-known-symbol-logic.js,
-	// which loads this file before patching the method.
-	var nativeReplace = String.prototype.replace;
-
-	var patchedExec = nativeExec;
-
-	var UPDATES_LAST_INDEX_WRONG = (function () {
-	  var re1 = /a/;
-	  var re2 = /b*/g;
-	  nativeExec.call(re1, 'a');
-	  nativeExec.call(re2, 'a');
-	  return re1.lastIndex !== 0 || re2.lastIndex !== 0;
-	})();
-
-	// nonparticipating capturing group, copied from es5-shim's String#split patch.
-	var NPCG_INCLUDED = /()??/.exec('')[1] !== undefined;
-
-	var PATCH = UPDATES_LAST_INDEX_WRONG || NPCG_INCLUDED;
-
-	if (PATCH) {
-	  patchedExec = function exec(str) {
-	    var re = this;
-	    var lastIndex, reCopy, match, i;
-
-	    if (NPCG_INCLUDED) {
-	      reCopy = new RegExp('^' + re.source + '$(?!\\s)', regexpFlags.call(re));
-	    }
-	    if (UPDATES_LAST_INDEX_WRONG) lastIndex = re.lastIndex;
-
-	    match = nativeExec.call(re, str);
-
-	    if (UPDATES_LAST_INDEX_WRONG && match) {
-	      re.lastIndex = re.global ? match.index + match[0].length : lastIndex;
-	    }
-	    if (NPCG_INCLUDED && match && match.length > 1) {
-	      // Fix browsers whose `exec` methods don't consistently return `undefined`
-	      // for NPCG, like IE8. NOTE: This doesn' work for /(.?)?/
-	      nativeReplace.call(match[0], reCopy, function () {
-	        for (i = 1; i < arguments.length - 2; i++) {
-	          if (arguments[i] === undefined) match[i] = undefined;
-	        }
-	      });
-	    }
-
-	    return match;
-	  };
-	}
-
-	var regexpExec = patchedExec;
-
-	var SPECIES$2 = wellKnownSymbol('species');
-
-	var REPLACE_SUPPORTS_NAMED_GROUPS = !fails(function () {
-	  // #replace needs built-in support for named groups.
-	  // #match works fine because it just return the exec results, even if it has
-	  // a "grops" property.
-	  var re = /./;
-	  re.exec = function () {
-	    var result = [];
-	    result.groups = { a: '7' };
-	    return result;
-	  };
-	  return ''.replace(re, '$<a>') !== '7';
-	});
-
-	// Chrome 51 has a buggy "split" implementation when RegExp#exec !== nativeExec
-	// Weex JS has frozen built-in prototypes, so use try / catch wrapper
-	var SPLIT_WORKS_WITH_OVERWRITTEN_EXEC = !fails(function () {
-	  var re = /(?:)/;
-	  var originalExec = re.exec;
-	  re.exec = function () { return originalExec.apply(this, arguments); };
-	  var result = 'ab'.split(re);
-	  return result.length !== 2 || result[0] !== 'a' || result[1] !== 'b';
-	});
-
-	var fixRegexpWellKnownSymbolLogic = function (KEY, length, exec, sham) {
-	  var SYMBOL = wellKnownSymbol(KEY);
-
-	  var DELEGATES_TO_SYMBOL = !fails(function () {
-	    // String methods call symbol-named RegEp methods
-	    var O = {};
-	    O[SYMBOL] = function () { return 7; };
-	    return ''[KEY](O) != 7;
+	var sloppyArrayMethod = function (METHOD_NAME, argument) {
+	  var method = [][METHOD_NAME];
+	  return !method || !fails(function () {
+	    // eslint-disable-next-line no-useless-call,no-throw-literal
+	    method.call(null, argument || function () { throw 1; }, 1);
 	  });
-
-	  var DELEGATES_TO_EXEC = DELEGATES_TO_SYMBOL && !fails(function () {
-	    // Symbol-named RegExp methods call .exec
-	    var execCalled = false;
-	    var re = /a/;
-	    re.exec = function () { execCalled = true; return null; };
-
-	    if (KEY === 'split') {
-	      // RegExp[@@split] doesn't call the regex's exec method, but first creates
-	      // a new one. We need to return the patched regex when creating the new one.
-	      re.constructor = {};
-	      re.constructor[SPECIES$2] = function () { return re; };
-	    }
-
-	    re[SYMBOL]('');
-	    return !execCalled;
-	  });
-
-	  if (
-	    !DELEGATES_TO_SYMBOL ||
-	    !DELEGATES_TO_EXEC ||
-	    (KEY === 'replace' && !REPLACE_SUPPORTS_NAMED_GROUPS) ||
-	    (KEY === 'split' && !SPLIT_WORKS_WITH_OVERWRITTEN_EXEC)
-	  ) {
-	    var nativeRegExpMethod = /./[SYMBOL];
-	    var methods = exec(SYMBOL, ''[KEY], function (nativeMethod, regexp, str, arg2, forceStringMethod) {
-	      if (regexp.exec === regexpExec) {
-	        if (DELEGATES_TO_SYMBOL && !forceStringMethod) {
-	          // The native String method already delegates to @@method (this
-	          // polyfilled function), leasing to infinite recursion.
-	          // We avoid it by directly calling the native @@method method.
-	          return { done: true, value: nativeRegExpMethod.call(regexp, str, arg2) };
-	        }
-	        return { done: true, value: nativeMethod.call(str, regexp, arg2) };
-	      }
-	      return { done: false };
-	    });
-	    var stringMethod = methods[0];
-	    var regexMethod = methods[1];
-
-	    redefine(String.prototype, KEY, stringMethod);
-	    redefine(RegExp.prototype, SYMBOL, length == 2
-	      // 21.2.5.8 RegExp.prototype[@@replace](string, replaceValue)
-	      // 21.2.5.11 RegExp.prototype[@@split](string, limit)
-	      ? function (string, arg) { return regexMethod.call(string, this, arg); }
-	      // 21.2.5.6 RegExp.prototype[@@match](string)
-	      // 21.2.5.9 RegExp.prototype[@@search](string)
-	      : function (string) { return regexMethod.call(string, this); }
-	    );
-	    if (sham) hide(RegExp.prototype[SYMBOL], 'sham', true);
-	  }
 	};
 
-	// `String.prototype.{ codePointAt, at }` methods implementation
-	var createMethod$2 = function (CONVERT_TO_STRING) {
-	  return function ($this, pos) {
-	    var S = String(requireObjectCoercible($this));
-	    var position = toInteger(pos);
-	    var size = S.length;
-	    var first, second;
-	    if (position < 0 || position >= size) return CONVERT_TO_STRING ? '' : undefined;
-	    first = S.charCodeAt(position);
-	    return first < 0xD800 || first > 0xDBFF || position + 1 === size
-	      || (second = S.charCodeAt(position + 1)) < 0xDC00 || second > 0xDFFF
-	        ? CONVERT_TO_STRING ? S.charAt(position) : first
-	        : CONVERT_TO_STRING ? S.slice(position, position + 2) : (first - 0xD800 << 10) + (second - 0xDC00) + 0x10000;
-	  };
-	};
+	var nativeJoin = [].join;
 
-	var stringMultibyte = {
-	  // `String.prototype.codePointAt` method
-	  // https://tc39.github.io/ecma262/#sec-string.prototype.codepointat
-	  codeAt: createMethod$2(false),
-	  // `String.prototype.at` method
-	  // https://github.com/mathiasbynens/String.prototype.at
-	  charAt: createMethod$2(true)
-	};
+	var ES3_STRINGS = indexedObject != Object;
+	var SLOPPY_METHOD = sloppyArrayMethod('join', ',');
 
-	var charAt = stringMultibyte.charAt;
-
-	// `AdvanceStringIndex` abstract operation
-	// https://tc39.github.io/ecma262/#sec-advancestringindex
-	var advanceStringIndex = function (S, index, unicode) {
-	  return index + (unicode ? charAt(S, index).length : 1);
-	};
-
-	// `RegExpExec` abstract operation
-	// https://tc39.github.io/ecma262/#sec-regexpexec
-	var regexpExecAbstract = function (R, S) {
-	  var exec = R.exec;
-	  if (typeof exec === 'function') {
-	    var result = exec.call(R, S);
-	    if (typeof result !== 'object') {
-	      throw TypeError('RegExp exec method returned something other than an Object or null');
-	    }
-	    return result;
-	  }
-
-	  if (classofRaw(R) !== 'RegExp') {
-	    throw TypeError('RegExp#exec called on incompatible receiver');
-	  }
-
-	  return regexpExec.call(R, S);
-	};
-
-	var max$1 = Math.max;
-	var min$2 = Math.min;
-	var floor$1 = Math.floor;
-	var SUBSTITUTION_SYMBOLS = /\$([$&'`]|\d\d?|<[^>]*>)/g;
-	var SUBSTITUTION_SYMBOLS_NO_NAMED = /\$([$&'`]|\d\d?)/g;
-
-	var maybeToString = function (it) {
-	  return it === undefined ? it : String(it);
-	};
-
-	// @@replace logic
-	fixRegexpWellKnownSymbolLogic('replace', 2, function (REPLACE, nativeReplace, maybeCallNative) {
-	  return [
-	    // `String.prototype.replace` method
-	    // https://tc39.github.io/ecma262/#sec-string.prototype.replace
-	    function replace(searchValue, replaceValue) {
-	      var O = requireObjectCoercible(this);
-	      var replacer = searchValue == undefined ? undefined : searchValue[REPLACE];
-	      return replacer !== undefined
-	        ? replacer.call(searchValue, O, replaceValue)
-	        : nativeReplace.call(String(O), searchValue, replaceValue);
-	    },
-	    // `RegExp.prototype[@@replace]` method
-	    // https://tc39.github.io/ecma262/#sec-regexp.prototype-@@replace
-	    function (regexp, replaceValue) {
-	      var res = maybeCallNative(nativeReplace, regexp, this, replaceValue);
-	      if (res.done) return res.value;
-
-	      var rx = anObject(regexp);
-	      var S = String(this);
-
-	      var functionalReplace = typeof replaceValue === 'function';
-	      if (!functionalReplace) replaceValue = String(replaceValue);
-
-	      var global = rx.global;
-	      if (global) {
-	        var fullUnicode = rx.unicode;
-	        rx.lastIndex = 0;
-	      }
-	      var results = [];
-	      while (true) {
-	        var result = regexpExecAbstract(rx, S);
-	        if (result === null) break;
-
-	        results.push(result);
-	        if (!global) break;
-
-	        var matchStr = String(result[0]);
-	        if (matchStr === '') rx.lastIndex = advanceStringIndex(S, toLength(rx.lastIndex), fullUnicode);
-	      }
-
-	      var accumulatedResult = '';
-	      var nextSourcePosition = 0;
-	      for (var i = 0; i < results.length; i++) {
-	        result = results[i];
-
-	        var matched = String(result[0]);
-	        var position = max$1(min$2(toInteger(result.index), S.length), 0);
-	        var captures = [];
-	        // NOTE: This is equivalent to
-	        //   captures = result.slice(1).map(maybeToString)
-	        // but for some reason `nativeSlice.call(result, 1, result.length)` (called in
-	        // the slice polyfill when slicing native arrays) "doesn't work" in safari 9 and
-	        // causes a crash (https://pastebin.com/N21QzeQA) when trying to debug it.
-	        for (var j = 1; j < result.length; j++) captures.push(maybeToString(result[j]));
-	        var namedCaptures = result.groups;
-	        if (functionalReplace) {
-	          var replacerArgs = [matched].concat(captures, position, S);
-	          if (namedCaptures !== undefined) replacerArgs.push(namedCaptures);
-	          var replacement = String(replaceValue.apply(undefined, replacerArgs));
-	        } else {
-	          replacement = getSubstitution(matched, S, position, captures, namedCaptures, replaceValue);
-	        }
-	        if (position >= nextSourcePosition) {
-	          accumulatedResult += S.slice(nextSourcePosition, position) + replacement;
-	          nextSourcePosition = position + matched.length;
-	        }
-	      }
-	      return accumulatedResult + S.slice(nextSourcePosition);
-	    }
-	  ];
-
-	  // https://tc39.github.io/ecma262/#sec-getsubstitution
-	  function getSubstitution(matched, str, position, captures, namedCaptures, replacement) {
-	    var tailPos = position + matched.length;
-	    var m = captures.length;
-	    var symbols = SUBSTITUTION_SYMBOLS_NO_NAMED;
-	    if (namedCaptures !== undefined) {
-	      namedCaptures = toObject(namedCaptures);
-	      symbols = SUBSTITUTION_SYMBOLS;
-	    }
-	    return nativeReplace.call(replacement, symbols, function (match, ch) {
-	      var capture;
-	      switch (ch.charAt(0)) {
-	        case '$': return '$';
-	        case '&': return matched;
-	        case '`': return str.slice(0, position);
-	        case "'": return str.slice(tailPos);
-	        case '<':
-	          capture = namedCaptures[ch.slice(1, -1)];
-	          break;
-	        default: // \d\d?
-	          var n = +ch;
-	          if (n === 0) return match;
-	          if (n > m) {
-	            var f = floor$1(n / 10);
-	            if (f === 0) return match;
-	            if (f <= m) return captures[f - 1] === undefined ? ch.charAt(1) : captures[f - 1] + ch.charAt(1);
-	            return match;
-	          }
-	          capture = captures[n - 1];
-	      }
-	      return capture === undefined ? '' : capture;
-	    });
+	// `Array.prototype.join` method
+	// https://tc39.github.io/ecma262/#sec-array.prototype.join
+	_export({ target: 'Array', proto: true, forced: ES3_STRINGS || SLOPPY_METHOD }, {
+	  join: function join(separator) {
+	    return nativeJoin.call(toIndexedObject(this), separator === undefined ? ',' : separator);
 	  }
 	});
 
-	function _classCallCheck(instance, Constructor) {
-	  if (!(instance instanceof Constructor)) {
-	    throw new TypeError("Cannot call a class as a function");
-	  }
-	}
-
-	function _defineProperties(target, props) {
-	  for (var i = 0; i < props.length; i++) {
-	    var descriptor = props[i];
-	    descriptor.enumerable = descriptor.enumerable || false;
-	    descriptor.configurable = true;
-	    if ("value" in descriptor) descriptor.writable = true;
-	    Object.defineProperty(target, descriptor.key, descriptor);
-	  }
-	}
-
-	function _createClass(Constructor, protoProps, staticProps) {
-	  if (protoProps) _defineProperties(Constructor.prototype, protoProps);
-	  if (staticProps) _defineProperties(Constructor, staticProps);
-	  return Constructor;
-	}
-
-	function _inherits(subClass, superClass) {
-	  if (typeof superClass !== "function" && superClass !== null) {
-	    throw new TypeError("Super expression must either be null or a function");
-	  }
-
-	  subClass.prototype = Object.create(superClass && superClass.prototype, {
-	    constructor: {
-	      value: subClass,
-	      writable: true,
-	      configurable: true
-	    }
-	  });
-	  if (superClass) _setPrototypeOf(subClass, superClass);
-	}
-
-	function _getPrototypeOf(o) {
-	  _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) {
-	    return o.__proto__ || Object.getPrototypeOf(o);
-	  };
-	  return _getPrototypeOf(o);
-	}
-
-	function _setPrototypeOf(o, p) {
-	  _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) {
-	    o.__proto__ = p;
-	    return o;
-	  };
-
-	  return _setPrototypeOf(o, p);
-	}
-
-	function _assertThisInitialized(self) {
-	  if (self === void 0) {
-	    throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
-	  }
-
-	  return self;
-	}
-
-	function _possibleConstructorReturn(self, call) {
-	  if (call && (typeof call === "object" || typeof call === "function")) {
-	    return call;
-	  }
-
-	  return _assertThisInitialized(self);
-	}
-
-	function _superPropBase(object, property) {
-	  while (!Object.prototype.hasOwnProperty.call(object, property)) {
-	    object = _getPrototypeOf(object);
-	    if (object === null) break;
-	  }
-
-	  return object;
-	}
-
-	function _get(target, property, receiver) {
-	  if (typeof Reflect !== "undefined" && Reflect.get) {
-	    _get = Reflect.get;
-	  } else {
-	    _get = function _get(target, property, receiver) {
-	      var base = _superPropBase(target, property);
-
-	      if (!base) return;
-	      var desc = Object.getOwnPropertyDescriptor(base, property);
-
-	      if (desc.get) {
-	        return desc.get.call(receiver);
-	      }
-
-	      return desc.value;
-	    };
-	  }
-
-	  return _get(target, property, receiver || target);
+	function _inheritsLoose(subClass, superClass) {
+	  subClass.prototype = Object.create(superClass.prototype);
+	  subClass.prototype.constructor = subClass;
+	  subClass.__proto__ = superClass;
 	}
 
 	/**
 	 * @author zhixin wen <wenzhixin2010@gmail.com>
+	 *
+	 * @author M.J. <michael@qyvip.com>
+	 *
+	 * 修改增加左右定位
 	 */
 
 	$.extend($.fn.bootstrapTable.defaults, {
-	  fixedColumns: false,
-	  fixedNumber: 1
+	  leftFixedColumns: false,
+	  leftFixedNumber: 1,
+	  rightFixedColumns: false,
+	  rightFixedNumber: 1
 	});
 
 	$.BootstrapTable =
 	/*#__PURE__*/
 	function (_$$BootstrapTable) {
-	  _inherits(_class, _$$BootstrapTable);
+	  _inheritsLoose(_class, _$$BootstrapTable);
 
 	  function _class() {
-	    _classCallCheck(this, _class);
-
-	    return _possibleConstructorReturn(this, _getPrototypeOf(_class).apply(this, arguments));
+	    return _$$BootstrapTable.apply(this, arguments) || this;
 	  }
 
-	  _createClass(_class, [{
-	    key: "fitHeader",
-	    value: function fitHeader() {
-	      var _get2;
+	  var _proto = _class.prototype;
 
-	      for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
-	        args[_key] = arguments[_key];
-	      }
+	  _proto.fitHeader = function fitHeader() {
+	    var _$$BootstrapTable$pro;
 
-	      (_get2 = _get(_getPrototypeOf(_class.prototype), "fitHeader", this)).call.apply(_get2, [this].concat(args));
+	    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+	      args[_key] = arguments[_key];
+	    }
 
-	      if (!this.options.fixedColumns) {
-	        return;
-	      }
+	    (_$$BootstrapTable$pro = _$$BootstrapTable.prototype.fitHeader).call.apply(_$$BootstrapTable$pro, [this].concat(args));
 
-	      if (this.$el.is(':hidden')) {
-	        return;
-	      }
+	    console.log('fitHeader');
 
-	      this.$container.find('.fixed-table-header-columns').remove();
-	      this.$fixedHeader = $('<div class="fixed-table-header-columns"></div>');
-	      this.$fixedHeader.append(this.$tableHeader.find('>table').clone(true));
-	      this.$tableHeader.after(this.$fixedHeader);
-	      var width = this.getFixedColumnsWidth();
-	      this.$fixedHeader.css({
+	    if (!this.options.leftFixedColumns && !this.options.rightFixedColumns) {
+	      return;
+	    }
+
+	    if (this.$el.is(':hidden')) {
+	      return;
+	    }
+
+	    this.initFixedColumns();
+	    this.initFixedColumnsHeader();
+	    this.initFixedColumnsBody();
+	  };
+
+	  _proto.initBody = function initBody() {
+	    var _$$BootstrapTable$pro2;
+
+	    for (var _len2 = arguments.length, args = new Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+	      args[_key2] = arguments[_key2];
+	    }
+
+	    (_$$BootstrapTable$pro2 = _$$BootstrapTable.prototype.initBody).call.apply(_$$BootstrapTable$pro2, [this].concat(args));
+
+	    console.log('initBody', this.options, !this.options.leftFixedColumns && !this.options.rightFixedColumns);
+
+	    if (!this.options.leftFixedColumns && !this.options.rightFixedColumns) {
+	      return;
+	    }
+
+	    if (this.options.showHeader && this.options.height) {
+	      return;
+	    }
+	  };
+
+	  _proto.initFixedColumns = function initFixedColumns() {
+	    console.log('initFixedColumns');
+	    this.timeoutHeaderColumns_ = 0;
+	    this.timeoutBodyColumns_ = 0;
+	    this.$container.find('.fixed-table-header-columns').remove();
+	    this.$container.find('.fixed-table-body-columns').remove();
+
+	    if (this.options.leftFixedColumns) {
+	      // var leftWidth = this.getLeftFixedColumnsWidth()
+	      this.$leftFixedHeader = $(['<div class="fixed-table-header-columns fixed-table-header-columns-left">', '<table>', '<thead></thead>', '</table>', '</div>'].join(''));
+	      this.$leftFixedHeader.find('table').attr('class', this.$el.attr('class'));
+	      this.$leftFixedHeaderColumns = this.$leftFixedHeader.find('thead');
+	      this.$tableHeader.after(this.$leftFixedHeader);
+	      var leftWidth = this.getLeftFixedColumnsWidth();
+	      this.$leftFixedHeader.css({
 	        top: 0,
-	        width: width,
+	        width: leftWidth,
 	        height: this.$tableHeader.outerHeight(true)
 	      });
-	      this.initFixedColumnsBody();
-	      this.$fixedBody.css({
+	      this.$leftFixedBody = $(['<div class="fixed-table-body-columns fixed-table-body-columns-left">', '<table>', '<tbody></tbody>', '</table>', '</div>'].join(''));
+	      this.$leftFixedBody.find('table').attr('class', this.$el.attr('class'));
+	      this.$leftFixedBodyColumns = this.$leftFixedBody.find('tbody');
+	      this.$tableBody.after(this.$leftFixedBody);
+	      this.$leftFixedBody.css({
 	        top: this.$tableHeader.outerHeight(true),
-	        width: width,
+	        width: leftWidth,
 	        height: this.$tableBody.outerHeight(true) - 1
 	      });
-	      this.initFixedColumnsEvents();
 	    }
-	  }, {
-	    key: "initBody",
-	    value: function initBody() {
-	      var _get3;
 
-	      for (var _len2 = arguments.length, args = new Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-	        args[_key2] = arguments[_key2];
-	      }
-
-	      (_get3 = _get(_getPrototypeOf(_class.prototype), "initBody", this)).call.apply(_get3, [this].concat(args));
-
-	      if (!this.options.fixedColumns) {
-	        return;
-	      }
-
-	      if (this.options.showHeader && this.options.height) {
-	        return;
-	      }
-
-	      this.initFixedColumnsBody();
-	      this.$fixedBody.css({
+	    if (this.options.rightFixedColumns) {
+	      // var rightWidth = this.getRightFixedColumnsWidth()
+	      this.$rightFixedHeader = $(['<div class="fixed-table-header-columns fixed-table-header-columns-right" style="z-index:100;background:#fff;">', '<table>', '<thead></thead>', '</table>', '</div>'].join(''));
+	      this.$rightFixedHeader.find('table').attr('class', this.$el.attr('class'));
+	      this.$rightFixedHeaderColumns = this.$rightFixedHeader.find('thead');
+	      this.$tableHeader.after(this.$rightFixedHeader);
+	      var rightWidth = this.getRightFixedColumnsWidth();
+	      this.$rightFixedHeader.css({
 	        top: 0,
-	        width: this.getFixedColumnsWidth(),
-	        height: this.$tableHeader.outerHeight(true) + this.$tableBody.outerHeight(true)
+	        right: '14px',
+	        width: rightWidth,
+	        height: this.$tableHeader.outerHeight(true)
 	      });
-	      this.initFixedColumnsEvents();
+	      this.$rightFixedBody = $(['<div class="fixed-table-body-columns fixed-table-body-columns-right" style="z-index:100;background:#fff;">', '<table>', '<tbody></tbody>', '</table>', '</div>'].join(''));
+	      this.$rightFixedBody.find('table').attr('class', this.$el.attr('class'));
+	      this.$rightFixedBodyColumns = this.$rightFixedBody.find('tbody');
+	      this.$tableBody.after(this.$rightFixedBody);
+	      this.$rightFixedBody.css({
+	        top: this.$tableHeader.outerHeight(true),
+	        right: '14px',
+	        width: rightWidth,
+	        height: this.$tableBody.outerHeight(true) - 1
+	      });
 	    }
-	  }, {
-	    key: "initFixedColumnsBody",
-	    value: function initFixedColumnsBody() {
-	      this.$container.find('.fixed-table-body-columns').remove();
-	      this.$fixedBody = $('<div class="fixed-table-body-columns"></div>');
-	      this.$fixedBody.append(this.$tableBody.find('>table').clone(true));
-	      this.$tableBody.after(this.$fixedBody);
-	    }
-	  }, {
-	    key: "getFixedColumnsWidth",
-	    value: function getFixedColumnsWidth() {
-	      var visibleFields = this.getVisibleFields();
-	      var width = 0;
+	  };
 
-	      for (var i = 0; i < this.options.fixedNumber; i++) {
-	        width += this.$header.find("th[data-field=\"".concat(visibleFields[i], "\"]")).outerWidth(true);
+	  _proto.initFixedColumnsHeader = function initFixedColumnsHeader() {
+	    console.log('initFixedColumnsHeader', this.$header, this.$tableHeader);
+	    var $tr = this.$header.find('tr:eq(0)').clone();
+	    var $ths = $tr.clone().find('th'); // $tr.html('');
+	    // 左边列冻结
+
+	    if (this.options.leftFixedColumns) {
+	      var $newtr = $('<tr></tr>');
+	      $newtr.attr('data-index', $tr.attr('data-index'));
+	      $newtr.attr('data-uniqueid', $tr.attr('data-uniqueid'));
+
+	      for (var i = 0; i < this.options.leftFixedNumber; i++) {
+	        $newtr.append($ths.eq(i).clone());
 	      }
 
-	      return width + 1;
+	      this.$leftFixedHeaderColumns.html('').append($newtr);
+	    } // $tr.html('');
+	    // 右边列冻结
+
+
+	    if (this.options.rightFixedColumns) {
+	      var $newtr2 = $('<tr></tr>');
+	      $newtr2.attr('data-index', $tr.attr('data-index'));
+	      $newtr2.attr('data-uniqueid', $tr.attr('data-uniqueid'));
+
+	      for (var j = 0; j < this.options.rightFixedNumber; j++) {
+	        $newtr2.append($ths.eq($ths.length - this.options.rightFixedNumber + j).clone());
+	      }
+
+	      this.$rightFixedHeaderColumns.html('').append($newtr2);
 	    }
-	  }, {
-	    key: "initFixedColumnsEvents",
-	    value: function initFixedColumnsEvents() {
-	      var _this = this;
+	  };
 
-	      // events
-	      this.$tableBody.off('scroll.fixed-columns').on('scroll.fixed-columns', function (e) {
-	        _this.$fixedBody.find('table').css('top', -$(e.currentTarget).scrollTop());
+	  _proto.initFixedColumnsBody = function initFixedColumnsBody() {
+	    var that = this;
+	    console.log('initFixedColumnsBody');
+	    this.$table = this.$tableBody.find('>table');
+	    /**
+	     * 左侧固定列
+	     */
+
+	    if (this.options.leftFixedColumns) {
+	      // console.log('leftFixedColumnsBody', this.$table.find('tr[data-index]'))
+	      this.$table.find('tr[data-index]').each(function () {
+	        var $tr = $(this).clone();
+	        var $tds = $tr.clone().find('td');
+	        $tr.html('');
+
+	        for (var i = 0; i < that.options.leftFixedNumber; i++) {
+	          // console.log('leftFixedColumnsBody-tds', i, that.options.leftFixedNumber, $tds, $tds.eq(i))
+	          $tr.append($tds.eq(i).clone());
+	        }
+
+	        that.$leftFixedBodyColumns.append($tr);
 	      });
-	      this.$body.find('> tr[data-index]').off('hover').hover(function (e) {
-	        var index = $(e.currentTarget).data('index');
-
-	        _this.$fixedBody.find("tr[data-index=\"".concat(index, "\"]")).css('background-color', $(e.currentTarget).css('background-color'));
-	      }, function (e) {
-	        var index = $(e.currentTarget).data('index');
-
-	        var $tr = _this.$fixedBody.find("tr[data-index=\"".concat(index, "\"]"));
-
-	        $tr.attr('style', $tr.attr('style').replace(/background-color:.*;/, ''));
-	      });
-	      this.$fixedBody.find('tr[data-index]').off('hover').hover(function (e) {
-	        var index = $(e.currentTarget).data('index');
-
-	        _this.$body.find("tr[data-index=\"".concat(index, "\"]")).css('background-color', $(e.currentTarget).css('background-color'));
-	      }, function (e) {
-	        var index = $(e.currentTarget).data('index');
-
-	        var $tr = _this.$body.find("> tr[data-index=\"".concat(index, "\"]"));
-
-	        $tr.attr('style', $tr.attr('style').replace(/background-color:.*;/, ''));
-	      });
+	      this.initFixedColumnsEvents(that.$leftFixedBody);
 	    }
-	  }]);
+	    /**
+	     * 右侧固定列
+	     */
+
+
+	    if (this.options.rightFixedColumns) {
+	      this.$table.find('tr[data-index]').each(function () {
+	        var $tr = $(this).clone();
+	        var $tds = $tr.clone().find('td');
+	        $tr.html('');
+
+	        for (var i = 0; i < that.options.rightFixedNumber; i++) {
+	          var indexTd = $tds.length - that.options.rightFixedNumber + i;
+	          var oldTd = $tds.eq(indexTd);
+	          var fixTd = oldTd.clone();
+	          $tr.append(fixTd);
+	        }
+
+	        that.$rightFixedBodyColumns.append($tr);
+	      });
+	      this.initFixedColumnsEvents(that.$rightFixedBody);
+	    }
+	  };
+
+	  _proto.getLeftFixedColumnsWidth = function getLeftFixedColumnsWidth() {
+	    console.log('getLeftFixedColumnsWidth');
+	    var visibleFields = this.getVisibleFields();
+	    var width = 0;
+
+	    for (var i = 0; i < this.options.leftFixedNumber; i++) {
+	      width += this.$header.find("th[data-field=\"" + visibleFields[i] + "\"]").outerWidth(true);
+	    }
+
+	    return width + 1;
+	  };
+
+	  _proto.getRightFixedColumnsWidth = function getRightFixedColumnsWidth() {
+	    var visibleFields = this.getVisibleFields();
+	    var width = 0;
+	    var visibleFieldsLength = visibleFields.length - 1;
+
+	    for (var i = 0; i < this.options.rightFixedNumber; i++) {
+	      width += this.$header.find("th[data-field=\"" + visibleFields[visibleFieldsLength - i] + "\"]").outerWidth(true);
+	      console.log('getRightFixedColumnsWidth', visibleFieldsLength - i, visibleFields[visibleFieldsLength - i], width);
+	    }
+
+	    return width + 1;
+	  };
+
+	  _proto.initFixedColumnsEvents = function initFixedColumnsEvents($el) {// events
+	    //   this.$tableBody.off('scroll.fixed-columns').on('scroll.fixed-columns', e => {
+	    //     $el.find('table').css('top', -$(e.currentTarget).scrollTop())
+	    //   })
+	    //   this.$body.find('> tr[data-index]').off('hover').hover(e => {
+	    //     const index = $(e.currentTarget).data('index')
+	    //     $el.find(`tr[data-index="${index}"]`)
+	    //       .css('background-color', $(e.currentTarget).css('background-color'))
+	    //   }, e => {
+	    //     const index = $(e.currentTarget).data('index')
+	    //     const $tr = $el.find(`tr[data-index="${index}"]`)
+	    //     $tr.attr('style', $tr.attr('style').replace(/background-color:.*;/, ''))
+	    //   })
+	    //   $el.find('tr[data-index]').off('hover').hover(e => {
+	    //     const index = $(e.currentTarget).data('index')
+	    //     this.$body.find(`tr[data-index="${index}"]`)
+	    //       .css('background-color', $(e.currentTarget).css('background-color'))
+	    //   }, e => {
+	    //     const index = $(e.currentTarget).data('index')
+	    //     const $tr = this.$body.find(`> tr[data-index="${index}"]`)
+	    //     $tr.attr('style', $tr.attr('style').replace(/background-color:.*;/, ''))
+	    //   })
+	    // }
+	  };
 
 	  return _class;
-	}($.BootstrapTable);
+	}($.BootstrapTable); // resetView(...args) {
+	//   super.resetView(...args)
+	//   // if (!this.options.leftFixedColumns && !this.options.rightFixedColumns) {
+	//   //   return
+	//   // }
+	//   // clearTimeout(this.timeoutHeaderColumns_)
+	//   // this.timeoutHeaderColumns_ = setTimeout($.proxy(this.resetViewHeaderColumns, this), this.$el.is(':hidden') ? 100 : 0)
+	//   // clearTimeout(this.timeoutBodyColumns_)
+	//   // this.timeoutBodyColumns_ = setTimeout($.proxy(this.resetViewBodyColumns, this), this.$el.is(':hidden') ? 100 : 0)
+	// }
+	// resetViewHeaderColumns() {
+	//   var that = this
+	//   var visibleFields = this.getVisibleFields()
+	//   var headerWidth = 0
+	//   if (that.options.leftFixedColumns) {
+	//     this.$body.find('tr:first-child:not(.no-records-found) > *').each(function (i) {
+	//       var $this = $(this)
+	//       var index = i
+	//       if (i >= that.options.leftFixedNumber) {
+	//         return false
+	//       }
+	//       if (that.options.detailView && !that.options.cardView) {
+	//         index = i - 1
+	//       }
+	//       that.$leftFixedHeader.find('thead th[data-field="' + visibleFields[index] + '"]')
+	//         .find('.fht-cell').width($this.outerWidth() - 1)
+	//       headerWidth += $this.outerWidth() + 1
+	//     })
+	//     this.$leftFixedHeader.css({
+	//       top: 0,
+	//       width: headerWidth,
+	//       height: this.$tableHeader.outerHeight(true)
+	//     }).show()
+	//   }
+	//   if (that.options.rightFixedColumns) {
+	//     this.$body.find('tr:first-child:not(.no-records-found) > *').each(function (i) {
+	//       var $this = $(this)
+	//       var index = i
+	//       if (i >= visibleFields.length - that.options.rightFixedNumber) {
+	//         that.$rightFixedHeader.find('thead th[data-field="' + visibleFields[index] + '"]')
+	//           .find('.fht-cell').width($this.outerWidth() - 1)
+	//         headerWidth += $this.outerWidth() + 1
+	//       }
+	//     })
+	//     this.$rightFixedHeader.css({
+	//       top: 0,
+	//       right: '14px',
+	//       width: headerWidth,
+	//       height: this.$tableHeader.outerHeight(true)
+	//     }).show()
+	//   }
+	// }
+	// resetViewBodyColumns() {
+	//   var that = this
+	//   var top = this.$tableHeader.outerHeight(true)
+	//   var height = this.$tableBody.outerHeight(true)
+	//   if (that.options.leftFixedColumns) {
+	//     if (!this.$body.find('> tr[data-index]').length) {
+	//       this.$leftFixedBody.hide()
+	//       return
+	//     }
+	//     if (!this.options.height) {
+	//       top = this.$leftFixedHeader.height()
+	//       height -= top
+	//     }
+	//     this.$leftFixedBody.css({
+	//       top: top,
+	//       width: this.$leftFixedHeader.width(),
+	//       height: height
+	//     }).show()
+	//     // this.$body.find('> tr').each(function (i) {
+	//     //   that.$leftFixedBody.find('tbody tr:eq(' + i + ')').height($(this).height())
+	//     // })
+	//     // // events
+	//     this.initFixedColumnsEvents(that.$leftFixedBody)
+	//   }
+	//   if (that.options.rightFixedColumns) {
+	//     if (!this.$body.find('> tr[data-index]').length) {
+	//       this.$rightFixedBody.hide()
+	//       return
+	//     }
+	//     if (!this.options.height) {
+	//       top = this.$rightFixedHeader.height()
+	//       height -= top
+	//     }
+	//     this.$rightFixedBody.css({
+	//       top: top,
+	//       right: '14px',
+	//       width: this.$rightFixedHeader.width(),
+	//       height: height - 13
+	//     }).show()
+	//     // this.$body.find('> tr').each(function (i) {
+	//     //   that.$rightFixedBody.find('tbody tr:eq(' + i + ')').height($(this).height())
+	//     // })
+	//     // // events
+	//     this.initFixedColumnsEvents(that.$rightFixedBody)
+	//   }
+	// }
 
 }));

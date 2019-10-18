@@ -12,7 +12,6 @@
 		return module = { exports: {} }, fn(module, module.exports), module.exports;
 	}
 
-	var O = 'object';
 	var check = function (it) {
 	  return it && it.Math == Math && it;
 	};
@@ -20,10 +19,10 @@
 	// https://github.com/zloirock/core-js/issues/86#issuecomment-115759028
 	var global_1 =
 	  // eslint-disable-next-line no-undef
-	  check(typeof globalThis == O && globalThis) ||
-	  check(typeof window == O && window) ||
-	  check(typeof self == O && self) ||
-	  check(typeof commonjsGlobal == O && commonjsGlobal) ||
+	  check(typeof globalThis == 'object' && globalThis) ||
+	  check(typeof window == 'object' && window) ||
+	  check(typeof self == 'object' && self) ||
+	  check(typeof commonjsGlobal == 'object' && commonjsGlobal) ||
 	  // eslint-disable-next-line no-new-func
 	  Function('return this')();
 
@@ -179,7 +178,7 @@
 		f: f$2
 	};
 
-	var hide = descriptors ? function (object, key, value) {
+	var createNonEnumerableProperty = descriptors ? function (object, key, value) {
 	  return objectDefineProperty.f(object, key, createPropertyDescriptor(1, value));
 	} : function (object, key, value) {
 	  object[key] = value;
@@ -188,20 +187,22 @@
 
 	var setGlobal = function (key, value) {
 	  try {
-	    hide(global_1, key, value);
+	    createNonEnumerableProperty(global_1, key, value);
 	  } catch (error) {
 	    global_1[key] = value;
 	  } return value;
 	};
 
-	var shared = createCommonjsModule(function (module) {
 	var SHARED = '__core-js_shared__';
 	var store = global_1[SHARED] || setGlobal(SHARED, {});
 
+	var sharedStore = store;
+
+	var shared = createCommonjsModule(function (module) {
 	(module.exports = function (key, value) {
-	  return store[key] || (store[key] = value !== undefined ? value : {});
+	  return sharedStore[key] || (sharedStore[key] = value !== undefined ? value : {});
 	})('versions', []).push({
-	  version: '3.1.3',
+	  version: '3.3.2',
 	  mode:  'global',
 	  copyright: '© 2019 Denis Pushkarev (zloirock.ru)'
 	});
@@ -245,25 +246,25 @@
 	};
 
 	if (nativeWeakMap) {
-	  var store = new WeakMap$1();
-	  var wmget = store.get;
-	  var wmhas = store.has;
-	  var wmset = store.set;
+	  var store$1 = new WeakMap$1();
+	  var wmget = store$1.get;
+	  var wmhas = store$1.has;
+	  var wmset = store$1.set;
 	  set = function (it, metadata) {
-	    wmset.call(store, it, metadata);
+	    wmset.call(store$1, it, metadata);
 	    return metadata;
 	  };
 	  get = function (it) {
-	    return wmget.call(store, it) || {};
+	    return wmget.call(store$1, it) || {};
 	  };
 	  has$1 = function (it) {
-	    return wmhas.call(store, it);
+	    return wmhas.call(store$1, it);
 	  };
 	} else {
 	  var STATE = sharedKey('state');
 	  hiddenKeys[STATE] = true;
 	  set = function (it, metadata) {
-	    hide(it, STATE, metadata);
+	    createNonEnumerableProperty(it, STATE, metadata);
 	    return metadata;
 	  };
 	  get = function (it) {
@@ -296,7 +297,7 @@
 	  var simple = options ? !!options.enumerable : false;
 	  var noTargetGet = options ? !!options.noTargetGet : false;
 	  if (typeof value == 'function') {
-	    if (typeof key == 'string' && !has(value, 'name')) hide(value, 'name', key);
+	    if (typeof key == 'string' && !has(value, 'name')) createNonEnumerableProperty(value, 'name', key);
 	    enforceInternalState(value).source = TEMPLATE.join(typeof key == 'string' ? key : '');
 	  }
 	  if (O === global_1) {
@@ -309,7 +310,7 @@
 	    simple = true;
 	  }
 	  if (simple) O[key] = value;
-	  else hide(O, key, value);
+	  else createNonEnumerableProperty(O, key, value);
 	// add fake Function#toString for correct work wrapped methods / constructors with methods like LoDash isNative
 	})(Function.prototype, 'toString', function toString() {
 	  return typeof this == 'function' && getInternalState(this).source || functionToString.call(this);
@@ -513,7 +514,7 @@
 	    }
 	    // add a flag to not completely full polyfills
 	    if (options.sham || (targetProperty && targetProperty.sham)) {
-	      hide(sourceProperty, 'sham', true);
+	      createNonEnumerableProperty(sourceProperty, 'sham', true);
 	    }
 	    // extend global
 	    redefine(target, key, sourceProperty, options);
@@ -545,10 +546,10 @@
 	});
 
 	var Symbol$1 = global_1.Symbol;
-	var store$1 = shared('wks');
+	var store$2 = shared('wks');
 
 	var wellKnownSymbol = function (name) {
-	  return store$1[name] || (store$1[name] = nativeSymbol && Symbol$1[name]
+	  return store$2[name] || (store$2[name] = nativeSymbol && Symbol$1[name]
 	    || (nativeSymbol ? Symbol$1 : uid)('Symbol.' + name));
 	};
 
@@ -785,7 +786,7 @@
 	// Array.prototype[@@unscopables]
 	// https://tc39.github.io/ecma262/#sec-array.prototype-@@unscopables
 	if (ArrayPrototype[UNSCOPABLES] == undefined) {
-	  hide(ArrayPrototype, UNSCOPABLES, objectCreate(null));
+	  createNonEnumerableProperty(ArrayPrototype, UNSCOPABLES, objectCreate(null));
 	}
 
 	// add a key to Array.prototype[@@unscopables]
@@ -813,103 +814,10 @@
 	// https://tc39.github.io/ecma262/#sec-array.prototype-@@unscopables
 	addToUnscopables(FIND);
 
-	function _classCallCheck(instance, Constructor) {
-	  if (!(instance instanceof Constructor)) {
-	    throw new TypeError("Cannot call a class as a function");
-	  }
-	}
-
-	function _defineProperties(target, props) {
-	  for (var i = 0; i < props.length; i++) {
-	    var descriptor = props[i];
-	    descriptor.enumerable = descriptor.enumerable || false;
-	    descriptor.configurable = true;
-	    if ("value" in descriptor) descriptor.writable = true;
-	    Object.defineProperty(target, descriptor.key, descriptor);
-	  }
-	}
-
-	function _createClass(Constructor, protoProps, staticProps) {
-	  if (protoProps) _defineProperties(Constructor.prototype, protoProps);
-	  if (staticProps) _defineProperties(Constructor, staticProps);
-	  return Constructor;
-	}
-
-	function _inherits(subClass, superClass) {
-	  if (typeof superClass !== "function" && superClass !== null) {
-	    throw new TypeError("Super expression must either be null or a function");
-	  }
-
-	  subClass.prototype = Object.create(superClass && superClass.prototype, {
-	    constructor: {
-	      value: subClass,
-	      writable: true,
-	      configurable: true
-	    }
-	  });
-	  if (superClass) _setPrototypeOf(subClass, superClass);
-	}
-
-	function _getPrototypeOf(o) {
-	  _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) {
-	    return o.__proto__ || Object.getPrototypeOf(o);
-	  };
-	  return _getPrototypeOf(o);
-	}
-
-	function _setPrototypeOf(o, p) {
-	  _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) {
-	    o.__proto__ = p;
-	    return o;
-	  };
-
-	  return _setPrototypeOf(o, p);
-	}
-
-	function _assertThisInitialized(self) {
-	  if (self === void 0) {
-	    throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
-	  }
-
-	  return self;
-	}
-
-	function _possibleConstructorReturn(self, call) {
-	  if (call && (typeof call === "object" || typeof call === "function")) {
-	    return call;
-	  }
-
-	  return _assertThisInitialized(self);
-	}
-
-	function _superPropBase(object, property) {
-	  while (!Object.prototype.hasOwnProperty.call(object, property)) {
-	    object = _getPrototypeOf(object);
-	    if (object === null) break;
-	  }
-
-	  return object;
-	}
-
-	function _get(target, property, receiver) {
-	  if (typeof Reflect !== "undefined" && Reflect.get) {
-	    _get = Reflect.get;
-	  } else {
-	    _get = function _get(target, property, receiver) {
-	      var base = _superPropBase(target, property);
-
-	      if (!base) return;
-	      var desc = Object.getOwnPropertyDescriptor(base, property);
-
-	      if (desc.get) {
-	        return desc.get.call(receiver);
-	      }
-
-	      return desc.value;
-	    };
-	  }
-
-	  return _get(target, property, receiver || target);
+	function _inheritsLoose(subClass, superClass) {
+	  subClass.prototype = Object.create(superClass.prototype);
+	  subClass.prototype.constructor = subClass;
+	  subClass.__proto__ = superClass;
 	}
 
 	/**
@@ -932,90 +840,85 @@
 	$.BootstrapTable =
 	/*#__PURE__*/
 	function (_$$BootstrapTable) {
-	  _inherits(_class, _$$BootstrapTable);
+	  _inheritsLoose(_class, _$$BootstrapTable);
 
 	  function _class() {
-	    _classCallCheck(this, _class);
-
-	    return _possibleConstructorReturn(this, _getPrototypeOf(_class).apply(this, arguments));
+	    return _$$BootstrapTable.apply(this, arguments) || this;
 	  }
 
-	  _createClass(_class, [{
-	    key: "initHeader",
-	    value: function initHeader() {
-	      var _get2,
-	          _this = this;
+	  var _proto = _class.prototype;
 
-	      for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
-	        args[_key] = arguments[_key];
-	      }
+	  _proto.initHeader = function initHeader() {
+	    var _$$BootstrapTable$pro,
+	        _this = this;
 
-	      (_get2 = _get(_getPrototypeOf(_class.prototype), "initHeader", this)).call.apply(_get2, [this].concat(args));
-
-	      if (!this.options.stickyHeader) {
-	        return;
-	      }
-
-	      this.$el.before('<div class="sticky-header-container"></div>');
-	      this.$el.before('<div class="sticky_anchor_begin"></div>');
-	      this.$el.after('<div class="sticky_anchor_end"></div>');
-	      this.$header.addClass('sticky-header'); // clone header just once, to be used as sticky header
-	      // deep clone header, using source header affects tbody>td width
-
-	      this.$stickyContainer = this.$tableBody.find('.sticky-header-container');
-	      this.$stickyBegin = this.$tableBody.find('.sticky_anchor_begin');
-	      this.$stickyEnd = this.$tableBody.find('.sticky_anchor_end');
-	      this.$stickyHeader = this.$header.clone(true, true); // render sticky on window scroll or resize
-
-	      $(window).on('resize.sticky-header-table', function () {
-	        return _this.renderStickyHeader();
-	      });
-	      $(window).on('scroll.sticky-header-table', function () {
-	        return _this.renderStickyHeader();
-	      });
-	      this.$tableBody.off('scroll').on('scroll', function () {
-	        return _this.matchPositionX();
-	      });
+	    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+	      args[_key] = arguments[_key];
 	    }
-	  }, {
-	    key: "renderStickyHeader",
-	    value: function renderStickyHeader() {
-	      var _this2 = this;
 
-	      var top = $(window).scrollTop(); // top anchor scroll position, minus header height
+	    (_$$BootstrapTable$pro = _$$BootstrapTable.prototype.initHeader).call.apply(_$$BootstrapTable$pro, [this].concat(args));
 
-	      var start = this.$stickyBegin.offset().top - this.options.stickyHeaderOffsetY; // bottom anchor scroll position, minus header height, minus sticky height
-
-	      var end = this.$stickyEnd.offset().top - this.options.stickyHeaderOffsetY - this.$header.height(); // show sticky when top anchor touches header, and when bottom anchor not exceeded
-
-	      if (top > start && top <= end) {
-	        // ensure clone and source column widths are the same
-	        this.$stickyHeader.find('tr:eq(0)').find('th').each(function (index, el) {
-	          $(el).css('min-width', _this2.$header.find('tr:eq(0)').find('th').eq(index).css('width'));
-	        }); // match bootstrap table style
-
-	        this.$stickyContainer.removeClass(hiddenClass).addClass('fix-sticky fixed-table-container'); // stick it in position
-
-	        this.$stickyContainer.css('top', "".concat(this.options.stickyHeaderOffsetY));
-	        this.$stickyContainer.css('left', "".concat(this.options.stickyHeaderOffsetLeft));
-	        this.$stickyContainer.css('right', "".concat(this.options.stickyHeaderOffsetRight)); // create scrollable container for header
-
-	        this.$stickyTable = $('<table/>');
-	        this.$stickyTable.addClass(this.options.classes); // append cloned header to dom
-
-	        this.$stickyContainer.html(this.$stickyTable.append(this.$stickyHeader)); // match clone and source header positions when left-right scroll
-
-	        this.matchPositionX();
-	      } else {
-	        this.$stickyContainer.removeClass('fix-sticky').addClass(hiddenClass);
-	      }
+	    if (!this.options.stickyHeader) {
+	      return;
 	    }
-	  }, {
-	    key: "matchPositionX",
-	    value: function matchPositionX() {
-	      this.$stickyContainer.scrollLeft(this.$tableBody.scrollLeft());
+
+	    this.$el.before('<div class="sticky-header-container"></div>');
+	    this.$el.before('<div class="sticky_anchor_begin"></div>');
+	    this.$el.after('<div class="sticky_anchor_end"></div>');
+	    this.$header.addClass('sticky-header'); // clone header just once, to be used as sticky header
+	    // deep clone header, using source header affects tbody>td width
+
+	    this.$stickyContainer = this.$tableBody.find('.sticky-header-container');
+	    this.$stickyBegin = this.$tableBody.find('.sticky_anchor_begin');
+	    this.$stickyEnd = this.$tableBody.find('.sticky_anchor_end');
+	    this.$stickyHeader = this.$header.clone(true, true); // render sticky on window scroll or resize
+
+	    $(window).on('resize.sticky-header-table', function () {
+	      return _this.renderStickyHeader();
+	    });
+	    $(window).on('scroll.sticky-header-table', function () {
+	      return _this.renderStickyHeader();
+	    });
+	    this.$tableBody.off('scroll').on('scroll', function () {
+	      return _this.matchPositionX();
+	    });
+	  };
+
+	  _proto.renderStickyHeader = function renderStickyHeader() {
+	    var _this2 = this;
+
+	    var top = $(window).scrollTop(); // top anchor scroll position, minus header height
+
+	    var start = this.$stickyBegin.offset().top - this.options.stickyHeaderOffsetY; // bottom anchor scroll position, minus header height, minus sticky height
+
+	    var end = this.$stickyEnd.offset().top - this.options.stickyHeaderOffsetY - this.$header.height(); // show sticky when top anchor touches header, and when bottom anchor not exceeded
+
+	    if (top > start && top <= end) {
+	      // ensure clone and source column widths are the same
+	      this.$stickyHeader.find('tr:eq(0)').find('th').each(function (index, el) {
+	        $(el).css('min-width', _this2.$header.find('tr:eq(0)').find('th').eq(index).css('width'));
+	      }); // match bootstrap table style
+
+	      this.$stickyContainer.removeClass(hiddenClass).addClass('fix-sticky fixed-table-container'); // stick it in position
+
+	      this.$stickyContainer.css('top', "" + this.options.stickyHeaderOffsetY);
+	      this.$stickyContainer.css('left', "" + this.options.stickyHeaderOffsetLeft);
+	      this.$stickyContainer.css('right', "" + this.options.stickyHeaderOffsetRight); // create scrollable container for header
+
+	      this.$stickyTable = $('<table/>');
+	      this.$stickyTable.addClass(this.options.classes); // append cloned header to dom
+
+	      this.$stickyContainer.html(this.$stickyTable.append(this.$stickyHeader)); // match clone and source header positions when left-right scroll
+
+	      this.matchPositionX();
+	    } else {
+	      this.$stickyContainer.removeClass('fix-sticky').addClass(hiddenClass);
 	    }
-	  }]);
+	  };
+
+	  _proto.matchPositionX = function matchPositionX() {
+	    this.$stickyContainer.scrollLeft(this.$tableBody.scrollLeft());
+	  };
 
 	  return _class;
 	}($.BootstrapTable);
