@@ -361,7 +361,7 @@ class BootstrapTable {
     }
 
     this.$selectAll = this.$header.find('[name="btSelectAll"]')
-    this.$selectAll.off('click').on('click', ({currentTarget}) => {
+    this.$selectAll.off('click').on('click', ({ currentTarget }) => {
       const checked = $(currentTarget).prop('checked')
       this[checked ? 'checkAll' : 'uncheckAll']()
       this.updateSelected()
@@ -437,7 +437,7 @@ class BootstrapTable {
     }
   }
 
-  onSort ({type, currentTarget}) {
+  onSort ({ type, currentTarget }) {
     const $this = type === 'keypress' ? $(currentTarget) : $(currentTarget).parent()
     const $this_ = this.$header.find('th').eq($this.index())
 
@@ -521,7 +521,7 @@ class BootstrapTable {
     if (o.showToggle) {
       html.push(`<button class="${this.constants.buttonsClass}" type="button" name="toggle"
         aria-label="Toggle" title="${o.formatToggle()}">
-        ${o.showButtonIcons ? Utils.sprintf(this.constants.html.icon, o.iconsPrefix, o.icons.toggleOff) : '' }
+        ${o.showButtonIcons ? Utils.sprintf(this.constants.html.icon, o.iconsPrefix, o.icons.toggleOff) : ''}
         ${o.showButtonText ? o.formatToggleOn() : ''}
         </button>`)
     }
@@ -529,7 +529,7 @@ class BootstrapTable {
     if (o.showFullscreen) {
       html.push(`<button class="${this.constants.buttonsClass}" type="button" name="fullscreen"
         aria-label="Fullscreen" title="${o.formatFullscreen()}">
-        ${o.showButtonIcons ? Utils.sprintf(this.constants.html.icon, o.iconsPrefix, o.icons.fullscreen) : '' }
+        ${o.showButtonIcons ? Utils.sprintf(this.constants.html.icon, o.iconsPrefix, o.icons.fullscreen) : ''}
         ${o.showButtonText ? o.formatFullscreen() : ''}
         </button>`)
     }
@@ -538,7 +538,7 @@ class BootstrapTable {
       html.push(`<div class="keep-open ${this.constants.classes.buttonsDropdown}" title="${o.formatColumns()}">
         <button class="${this.constants.buttonsClass} dropdown-toggle" type="button" data-toggle="dropdown"
         aria-label="Columns" title="${o.formatColumns()}">
-        ${o.showButtonIcons ? Utils.sprintf(this.constants.html.icon, o.iconsPrefix, o.icons.columns) : '' }
+        ${o.showButtonIcons ? Utils.sprintf(this.constants.html.icon, o.iconsPrefix, o.icons.columns) : ''}
         ${o.showButtonText ? o.formatColumns() : ''}
         ${this.constants.html.dropdownCaret}
         </button>
@@ -618,7 +618,7 @@ class BootstrapTable {
         e.stopImmediatePropagation()
       })
 
-      $checkboxes.off('click').on('click', ({currentTarget}) => {
+      $checkboxes.off('click').on('click', ({ currentTarget }) => {
         const $this = $(currentTarget)
 
         this._toggleColumn($this.val(), $this.prop('checked'), false)
@@ -626,7 +626,7 @@ class BootstrapTable {
         $toggleAll.prop('checked', $checkboxes.filter(':checked').length === this.columns.length)
       })
 
-      $toggleAll.off('click').on('click', ({currentTarget}) => {
+      $toggleAll.off('click').on('click', ({ currentTarget }) => {
         this._toggleAllColumns($(currentTarget).prop('checked'))
       })
     }
@@ -680,7 +680,7 @@ class BootstrapTable {
 
           clearTimeout(timeoutId) // doesn't matter if it's 0
           timeoutId = setTimeout(() => {
-            this.onSearch({currentTarget: event.currentTarget})
+            this.onSearch({ currentTarget: event.currentTarget })
           }, o.searchTimeOut)
         })
       }
@@ -689,7 +689,7 @@ class BootstrapTable {
         this.$toolbar.find('.search button[name=search]').off('click').on('click', event => {
           clearTimeout(timeoutId) // doesn't matter if it's 0
           timeoutId = setTimeout(() => {
-            this.onSearch({currentTarget: $searchInput})
+            this.onSearch({ currentTarget: $searchInput })
           }, o.searchTimeOut)
         })
 
@@ -708,7 +708,7 @@ class BootstrapTable {
     }
   }
 
-  onSearch ({currentTarget, firedByInitSearchText} = {}, overwriteSearchText = true) {
+  onSearch ({ currentTarget, firedByInitSearchText } = {}, overwriteSearchText = true) {
     if (currentTarget !== undefined && $(currentTarget).length && overwriteSearchText) {
       const text = $(currentTarget).val().trim()
 
@@ -889,7 +889,7 @@ class BootstrapTable {
     let $pre
     let $next
     let $number
-    const data = this.getData({includeHiddenRows: false})
+    const data = this.getData({ includeHiddenRows: false })
     let pageList = o.pageList
 
     if (o.sidePagination !== 'server') {
@@ -1673,7 +1673,7 @@ class BootstrapTable {
       if (this.options.searchText !== '') {
         const $search = this.$toolbar.find('.search input')
         $search.val(this.options.searchText)
-        this.onSearch({currentTarget: $search, firedByInitSearchText: true})
+        this.onSearch({ currentTarget: $search, firedByInitSearchText: true })
       }
     }
   }
@@ -1739,7 +1739,7 @@ class BootstrapTable {
 
     const fixedBody = this.$tableBody.get(0)
     const scrollWidth = fixedBody.scrollWidth > fixedBody.clientWidth &&
-    fixedBody.scrollHeight > fixedBody.clientHeight + this.$header.outerHeight()
+      fixedBody.scrollHeight > fixedBody.clientHeight + this.$header.outerHeight()
       ? Utils.getScrollBarWidth() : 0
 
     this.$el.css('margin-top', -this.$header.outerHeight())
@@ -1885,7 +1885,7 @@ class BootstrapTable {
 
     const fixedBody = this.$tableBody.get(0)
     const scrollWidth = fixedBody.scrollWidth > fixedBody.clientWidth &&
-    fixedBody.scrollHeight > fixedBody.clientHeight + this.$header.outerHeight()
+      fixedBody.scrollHeight > fixedBody.clientHeight + this.$header.outerHeight()
       ? Utils.getScrollBarWidth() : 0
 
     this.$tableFooter
@@ -1929,7 +1929,7 @@ class BootstrapTable {
   horizontalScroll () {
     // horizontal scroll event
     // TODO: it's probably better improving the layout than binding to scroll event
-    this.$tableBody.off('scroll').on('scroll', ({currentTarget}) => {
+    this.$tableBody.off('scroll').on('scroll', ({ currentTarget }) => {
       if (this.options.showHeader && this.options.height) {
         this.$tableHeader.scrollLeft($(currentTarget).scrollLeft())
       }
@@ -2228,7 +2228,7 @@ class BootstrapTable {
     }
     const allParams = Array.isArray(params) ? params : [params]
 
-    allParams.forEach(({id, field, value}) => {
+    allParams.forEach(({ id, field, value }) => {
       const rowId = this.options.data.indexOf(this.getRowByUniqueId(id))
 
       if (rowId === -1) {
@@ -2336,11 +2336,11 @@ class BootstrapTable {
   }
 
   getVisibleColumns () {
-    return this.columns.filter(({visible}) => visible)
+    return this.columns.filter(({ visible }) => visible)
   }
 
   getHiddenColumns () {
-    return this.columns.filter(({visible}) => !visible)
+    return this.columns.filter(({ visible }) => !visible)
   }
 
   showAllColumns () {
@@ -2425,7 +2425,7 @@ class BootstrapTable {
     this.$selectAll.add(this.$selectAll_).prop('checked', checked)
     this.$selectItem.filter(':enabled').prop('checked', checked)
     this.updateRows()
-
+    this.updateSelected()
     const rowsAfter = this.getSelections()
     if (checked) {
       this.trigger('check-all', rowsAfter, rowsBefore)
@@ -2665,7 +2665,7 @@ class BootstrapTable {
   resetSearch (text) {
     const $search = this.$toolbar.find('.search input')
     $search.val(text || '')
-    this.onSearch({currentTarget: $search})
+    this.onSearch({ currentTarget: $search })
   }
 
   filterBy (columns, options) {
@@ -2681,7 +2681,7 @@ class BootstrapTable {
       return this.$tableBody.scrollTop()
     }
 
-    let options = {unit: 'px', value: 0}
+    let options = { unit: 'px', value: 0 }
     if (typeof params === 'object') {
       options = Object.assign(options, params)
     } else if (typeof params === 'string' && params === 'bottom') {

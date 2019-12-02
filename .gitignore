@@ -33,3 +33,4 @@ package-lock.json
 .localized
 Icon
 .vscode
+dist
